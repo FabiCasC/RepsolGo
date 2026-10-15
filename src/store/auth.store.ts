@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 
-export type UserRole = 'cliente' | 'repartidor' | 'operador' | 'supervisor';
+export type UserRole = 'cliente' | 'operario';
 
 export interface UserProfile {
   id: string;
@@ -53,6 +53,19 @@ const DEFAULT_ACCOUNTS: Account[] = [
       email: 'fabiana.castroc22@gmail.com',
       phone: '987654321',
       role: 'cliente',
+      notifPush: true,
+      notifEmail: false,
+    },
+  },
+  {
+    email: 'operario@repsol.com',
+    password: '123456',
+    profile: {
+      id: '2',
+      name: 'Carlos Operario',
+      email: 'operario@repsol.com',
+      phone: '999000111',
+      role: 'operario',
       notifPush: true,
       notifEmail: false,
     },

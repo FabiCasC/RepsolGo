@@ -1,5 +1,6 @@
 export type UserRole = 'cliente' | 'operario'
 
+
 export type NivelFidelizacion = 'Bronce' | 'Plata' | 'Oro' | 'Platino' | 'Diamante'
 
 export interface User {
