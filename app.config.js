@@ -10,6 +10,11 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
+    splash: {
+      image: './assets/splash.png',
+      resizeMode: 'contain',
+      backgroundColor: '#041E42',
+    },
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
@@ -36,14 +41,6 @@ module.exports = {
         'expo-local-authentication',
         {
           faceIDPermission: 'Allow RepsolGo to use Face ID.',
-        },
-      ],
-      [
-        'expo-build-properties',
-        {
-          android: {
-            kotlinVersion: '1.9.24',
-          },
         },
       ],
     ],

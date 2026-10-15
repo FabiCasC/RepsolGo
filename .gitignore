@@ -19,3 +19,4 @@ yarn-error.log*
 *.orig
 android/
 ios/
+package-lock.json
