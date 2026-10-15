@@ -20,6 +20,7 @@ module.exports = {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#041E42',
       },
+      newArchEnabled: false,
       package: 'com.repsolperu.repsolgo',
       permissions: [
         'CAMERA',
