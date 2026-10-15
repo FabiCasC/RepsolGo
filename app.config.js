@@ -46,7 +46,7 @@ module.exports = {
     ],
     scheme: 'repsolgo',
     experiments: {
-      typedRoutes: true,
+      typedRoutes: false,
     },
   },
 };
