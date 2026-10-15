@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "RepsolGo",
+    "slug": "repsolgo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "repsolgo",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#041E42"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.repsolperu.repsolgo",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Necesitamos acceso a la cámara para escanear tus boletas.",
+        "NSPhotoLibraryUsageDescription": "Necesitamos acceso a tu galería para adjuntar boletas.",
+        "NSLocationWhenInUseUsageDescription": "Usamos tu ubicación para encontrar grifos Repsol cercanos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#041E42"
+      },
+      "package": "com.repsolperu.repsolgo",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        { "cameraPermission": "Permitir el acceso a la cámara para escanear boletas." }
+      ],
+      [
+        "expo-location",
+        { "locationWhenInUsePermission": "Permitir el acceso a la ubicación para encontrar grifos cercanos." }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
