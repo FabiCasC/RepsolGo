@@ -15,10 +15,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   // Fix react-native 0.86 exports map issue on Windows for react-native-reanimated
   if (moduleName === 'react-native/Libraries/Renderer/shims/ReactNative') {
     return {
-      filePath: path.resolve(
-        __dirname,
-        'node_modules/react-native/Libraries/Renderer/shims/ReactNative.js'
-      ),
+      filePath: path.resolve(__dirname, 'shims/ReactNative.js'),
       type: 'sourceFile',
     };
   }
