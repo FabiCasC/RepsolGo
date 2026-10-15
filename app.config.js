@@ -10,11 +10,6 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
-    splash: {
-      image: './assets/splash.png',
-      resizeMode: 'contain',
-      backgroundColor: '#041E42',
-    },
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
@@ -45,6 +40,7 @@ module.exports = {
       ],
     ],
     scheme: 'repsolgo',
+    newArchEnabled: true,
     experiments: {
       typedRoutes: false,
     },
