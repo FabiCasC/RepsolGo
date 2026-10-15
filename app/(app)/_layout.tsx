@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Tabs, router } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
@@ -72,10 +73,14 @@ function IconPerfil({ color, size = 22 }: { color: string; size?: number }) {
 
 export default function AppLayout() {
   const token = useAuthStore(s => s.token);
-  if (!token) {
-    router.replace('/(auth)/login');
-    return null;
-  }
+
+  useEffect(() => {
+    if (!token) {
+      router.replace('/(auth)/login');
+    }
+  }, [token]);
+
+  if (!token) return null;
 
   return (
     <Tabs
