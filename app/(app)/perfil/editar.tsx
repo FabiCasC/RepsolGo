@@ -6,8 +6,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { useAuthStore } from '@/src/store/auth.store';
 import { Colors } from '@/src/constants/colors';
+
+function IcoCameraSmall({ color = Colors.navy, size = 16 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Circle cx="12" cy="13" r="4" stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
 
 export default function EditarPerfilScreen() {
   const { user, updateProfile } = useAuthStore();
@@ -65,7 +75,7 @@ export default function EditarPerfilScreen() {
               </View>
             )}
             <View style={styles.cameraBadge}>
-              <Text style={{ fontSize: 16 }}>📷</Text>
+              <IcoCameraSmall color={Colors.navy} size={16} />
             </View>
           </TouchableOpacity>
           <Text style={styles.changePhotoText}>Toca para cambiar foto</Text>

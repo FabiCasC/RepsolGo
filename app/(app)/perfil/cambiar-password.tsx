@@ -5,8 +5,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { useAuthStore } from '@/src/store/auth.store';
 import { Colors } from '@/src/constants/colors';
+
+function IcoLockShield({ color = Colors.navy, size = 48 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="3" y="11" width="18" height="11" rx="2" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Path d="M7 11V7a5 5 0 0110 0v4" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx="12" cy="16" r="1" fill={color} />
+    </Svg>
+  );
+}
 
 export default function CambiarPasswordScreen() {
   const [current, setCurrent] = useState('');
@@ -45,7 +56,7 @@ export default function CambiarPasswordScreen() {
 
         <View style={styles.body}>
           <View style={styles.iconBox}>
-            <Text style={{ fontSize: 48 }}>🔐</Text>
+            <IcoLockShield color={Colors.navy} size={48} />
           </View>
 
           {[

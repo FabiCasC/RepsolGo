@@ -138,6 +138,8 @@ export default function AppLayout() {
       />
       {/* Tabs ocultos */}
       <Tabs.Screen name="retos" options={{ href: null }} />
+      <Tabs.Screen name="perfil/editar" options={{ href: null }} />
+      <Tabs.Screen name="perfil/cambiar-password" options={{ href: null }} />
     </Tabs>
   );
 }

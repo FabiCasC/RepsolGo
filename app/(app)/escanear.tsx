@@ -9,8 +9,35 @@ import {
 } from 'react-native'
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Svg, { Path, Circle, Polyline, Line } from 'react-native-svg'
 import { Colors } from '../../src/constants/colors'
 import { Button } from '../../src/components/ui/Button'
+
+function IcoCamera({ color = Colors.navy, size = 48 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Circle cx="12" cy="13" r="4" stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
+
+function IcoLightbulb({ color = 'rgba(255,255,255,0.7)', size = 14 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M9 21h6M12 3a6 6 0 016 6c0 2.22-1.21 4.16-3 5.2V17H9v-2.8C7.21 13.16 6 11.22 6 9a6 6 0 016-6z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function IcoCheckCircle({ color = '#16A34A', size = 36 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={1.8} />
+      <Polyline points="9,12 11,14 15,10" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 type EscanearState = 'camera' | 'processing' | 'result'
 
@@ -45,7 +72,9 @@ export default function EscanearScreen() {
     return (
       <SafeAreaView style={styles.permissionContainer}>
         <View style={styles.permissionContent}>
-          <Text style={styles.permissionIcon}>📷</Text>
+          <View style={styles.permissionIconBox}>
+            <IcoCamera color={Colors.navy} size={48} />
+          </View>
           <Text style={styles.permissionTitle}>Necesitamos la cámara</Text>
           <Text style={styles.permissionDesc}>
             Para escanear tus boletas y acreditar los puntos automáticamente.
@@ -103,7 +132,10 @@ export default function EscanearScreen() {
             </View>
 
             <View style={styles.captureArea}>
-              <Text style={styles.captureTip}>💡 Asegúrate de que el texto sea legible</Text>
+              <View style={styles.captureTipRow}>
+                <IcoLightbulb />
+                <Text style={styles.captureTip}>Asegúrate de que el texto sea legible</Text>
+              </View>
               <TouchableOpacity style={styles.captureBtn} onPress={handleCapture} activeOpacity={0.85}>
                 <View style={styles.captureBtnInner} />
               </TouchableOpacity>
@@ -134,7 +166,7 @@ export default function EscanearScreen() {
       <View style={styles.resultContent}>
         <View style={styles.resultHeader}>
           <View style={styles.successBadge}>
-            <Text style={styles.successIcon}>✅</Text>
+            <IcoCheckCircle />
           </View>
           <Text style={styles.resultTitle}>Boleta reconocida</Text>
           <Text style={styles.resultSubtitle}>Confirma que los datos son correctos</Text>
@@ -204,9 +236,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 32,
   },
-  permissionIcon: {
-    fontSize: 64,
+  permissionIconBox: {
     marginBottom: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 96,
+    height: 96,
+    borderRadius: 28,
+    backgroundColor: '#EEF2FF',
   },
   permissionTitle: {
     fontSize: 24,
@@ -308,10 +345,15 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
     alignItems: 'center',
   },
+  captureTipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 20,
+  },
   captureTip: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.7)',
-    marginBottom: 20,
   },
   captureBtn: {
     width: 72,
@@ -386,9 +428,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-  },
-  successIcon: {
-    fontSize: 36,
   },
   resultTitle: {
     fontSize: 24,

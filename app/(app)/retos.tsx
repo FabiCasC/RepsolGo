@@ -6,10 +6,27 @@ import {
   ScrollView,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Svg, { Path, Circle, Polyline, Line, Rect } from 'react-native-svg'
 import { Colors } from '../../src/constants/colors'
 import { RetoCard } from '../../src/components/gamificacion/RetoCard'
 import { BadgeGrid } from '../../src/components/gamificacion/BadgeGrid'
 import type { Reto, Badge } from '../../src/types'
+
+function IcoFlame({ color = Colors.red, size = 16 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function IcoLeaf({ color = '#16A34A', size = 22 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M17 8C8 10 5.9 16.17 3.82 19.93a.5.5 0 00.79.6C7.19 17 11.1 15 17 15c0-5 2-10 7-12-2 6-3 10-3 12s-2 3-4 3-4-1-4-3" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 const RETOS_ACTIVOS: Reto[] = [
   {
@@ -76,7 +93,7 @@ export default function RetosScreen() {
             </View>
             <View style={styles.rachaContainer}>
               <View style={styles.rachaBadge}>
-                <Text style={styles.rachaEmoji}>🔥</Text>
+                <IcoFlame color={Colors.red} size={16} />
                 <Text style={styles.rachaText}>7 días</Text>
               </View>
               <Text style={styles.rachaLabel}>Racha</Text>
@@ -109,7 +126,7 @@ export default function RetosScreen() {
           <View style={styles.carbonCard}>
             <View style={styles.carbonHeader}>
               <View style={styles.carbonIcon}>
-                <Text style={styles.carbonEmoji}>🌱</Text>
+                <IcoLeaf color="#16A34A" size={22} />
               </View>
               <View style={styles.carbonInfo}>
                 <Text style={styles.carbonTitle}>Huella de carbono</Text>
@@ -174,9 +191,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     gap: 4,
-  },
-  rachaEmoji: {
-    fontSize: 16,
   },
   rachaText: {
     color: Colors.white,
@@ -260,9 +274,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-  },
-  carbonEmoji: {
-    fontSize: 22,
   },
   carbonInfo: {
     flex: 1,

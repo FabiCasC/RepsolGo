@@ -5,8 +5,31 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
+import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { useAuthStore } from '@/src/store/auth.store';
 import { Colors } from '@/src/constants/colors';
+
+function IcoEye({ visible, color = Colors.navy, size = 20 }: { visible: boolean; color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth={1.8} />
+      {!visible && <Line x1="3" y1="3" x2="21" y2="21" stroke={color} strokeWidth={1.8} strokeLinecap="round" />}
+    </Svg>
+  );
+}
+
+function IcoFingerprint({ color = Colors.navy, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 10a2 2 0 0 0-2 2c0 1.02.5 1.92 1.27 2.47" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Path d="M12 6a6 6 0 0 1 6 6c0 1.99-.97 3.76-2.46 4.85" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Path d="M8.53 16.11A6 6 0 0 1 6 12c0-3.31 2.69-6 6-6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Path d="M12 2C6.48 2 2 6.48 2 12c0 2.4.86 4.6 2.28 6.32" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Path d="M21.72 18.32A9.95 9.95 0 0 0 22 12C22 6.48 17.52 2 12 2" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('fabiana.castroc22@gmail.com');
@@ -81,7 +104,7 @@ export default function LoginScreen() {
               placeholderTextColor={Colors.textMuted}
             />
             <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPw(v => !v)}>
-              <Text style={{ color: Colors.navy }}>{showPw ? '🙈' : '👁️'}</Text>
+              <IcoEye visible={showPw} />
             </TouchableOpacity>
           </View>
 
@@ -99,7 +122,10 @@ export default function LoginScreen() {
 
           {biometricEnabled && (
             <TouchableOpacity style={styles.btnOutline} onPress={tryBiometric}>
-              <Text style={styles.btnOutlineText}>🔒 Usar biometría</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <IcoFingerprint />
+                <Text style={styles.btnOutlineText}>Usar biometría</Text>
+              </View>
             </TouchableOpacity>
           )}
 

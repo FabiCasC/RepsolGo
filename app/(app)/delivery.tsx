@@ -4,7 +4,39 @@ import {
   TextInput, Alert, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
 import { Colors } from '@/src/constants/colors';
+
+function IcoMoto({ color = '#fff', size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="5.5" cy="17.5" r="2.5" stroke={color} strokeWidth={1.8} />
+      <Circle cx="18.5" cy="17.5" r="2.5" stroke={color} strokeWidth={1.8} />
+      <Path d="M8 17.5h7M15 17.5l-3-7h-4l-1 3H5" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M15 10.5l1-3h3" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function IcoBox({ color = Colors.orange, size = 28 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      <Polyline points="3.27,6.96 12,12.01 20.73,6.96" stroke={color} strokeWidth={1.8} />
+      <Line x1="12" y1="22.08" x2="12" y2="12" stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
+
+function IcoGasTank({ color = Colors.navy, size = 32 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="3" y="3" width="12" height="18" rx="2" stroke={color} strokeWidth={1.8} />
+      <Path d="M15 7h2a2 2 0 012 2v3a2 2 0 002 2h0" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Line x1="7" y1="8" x2="11" y2="8" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 type Balon = { id: string; kg: number; price: number; desc: string };
 type OrderStatus = 'pendiente' | 'aceptado' | 'en_camino' | 'entregado';
@@ -31,9 +63,9 @@ const PAYMENTS = ['Yape', 'Plin', 'Tarjeta'];
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pendiente: 'Pendiente',
-  aceptado: '✅ Aceptado',
-  en_camino: '🛵 En camino',
-  entregado: '📦 Entregado',
+  aceptado: 'Aceptado',
+  en_camino: 'En camino',
+  entregado: 'Entregado',
 };
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
@@ -98,7 +130,10 @@ export default function DeliveryScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🛵 Delivery GLP</Text>
+        <View style={styles.headerTitleRow}>
+          <IcoMoto color="#fff" size={22} />
+          <Text style={styles.headerTitle}>Delivery GLP</Text>
+        </View>
         <Text style={styles.headerSub}>Balones de gas a domicilio</Text>
       </View>
 
@@ -122,7 +157,7 @@ export default function DeliveryScreen() {
             {BALONES.map(b => (
               <View key={b.id} style={styles.productCard}>
                 <View style={styles.productIcon}>
-                  <Text style={{ fontSize: 32 }}>🔵</Text>
+                  <IcoGasTank color={Colors.navy} size={32} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.productName}>Balón {b.kg} kg</Text>
@@ -217,7 +252,7 @@ export default function DeliveryScreen() {
             <Text style={styles.sectionTitle}>Mis pedidos</Text>
             {orders.length === 0 ? (
               <View style={styles.emptyBox}>
-                <Text style={{ fontSize: 40, textAlign: 'center' }}>📦</Text>
+                <IcoBox color={Colors.textMuted} size={40} />
                 <Text style={styles.emptyText}>Aún no tienes pedidos</Text>
               </View>
             ) : (
@@ -281,6 +316,7 @@ export default function DeliveryScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.surface },
   header: { backgroundColor: Colors.navy, padding: 20, paddingTop: 8 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
   headerSub: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
   tabBar: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: Colors.border },
