@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { sendRecoveryEmail } from '../services/email.service';
 
 export type UserRole = 'cliente' | 'operario';
 
@@ -188,13 +189,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   requestRecoveryCode: async (email) => {
-    await new Promise(r => setTimeout(r, 600));
     const accounts = await getAccounts();
     if (!accounts.find(a => a.email.toLowerCase() === email.toLowerCase())) {
       throw new Error('No existe una cuenta con ese correo');
     }
-    const code = '123456'; // mock fixed code
+    // Código aleatorio de 6 dígitos
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
     recoveryCodes[email.toLowerCase()] = code;
+    try {
+      await sendRecoveryEmail(email.toLowerCase(), code);
+    } catch (err: any) {
+      // Si EmailJS no está configurado, caemos en modo demo (mostramos código en pantalla)
+      if (err?.message === 'EMAIL_NOT_CONFIGURED') {
+        return code; // el caller mostrará el código en un Alert
+      }
+      throw new Error('No se pudo enviar el correo. Intenta de nuevo.');
+    }
     return code;
   },
 
