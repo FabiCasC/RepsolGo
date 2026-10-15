@@ -10,17 +10,11 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
-    splash: {
-      image: './assets/splash.png',
-      resizeMode: 'contain',
-      backgroundColor: '#041E42',
-    },
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#041E42',
       },
-      newArchEnabled: false,
       package: 'com.repsolperu.repsolgo',
       permissions: [
         'CAMERA',
