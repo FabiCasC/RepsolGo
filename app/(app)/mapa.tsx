@@ -1,17 +1,18 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from 'react-native'
-import MapView, { Region } from 'react-native-maps'
+import MapView, { Region, PROVIDER_DEFAULT } from 'react-native-maps'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import * as Location from 'expo-location'
 import { Colors } from '../../src/constants/colors'
 import { GrifoMarker } from '../../src/components/mapa/GrifoMarker'
 import { GrifoBottomSheet } from '../../src/components/mapa/GrifoBottomSheet'
-import { GrifosService } from '../../src/services/grifos.service'
 import { Config } from '../../src/constants/config'
 import type { Grifo } from '../../src/types'
 
@@ -103,6 +104,17 @@ export default function MapaScreen() {
   const [grifos, setGrifos] = useState<Grifo[]>(INITIAL_GRIFOS)
   const [selectedGrifo, setSelectedGrifo] = useState<Grifo | null>(null)
   const [searchText, setSearchText] = useState('')
+  const [locationReady, setLocationReady] = useState(false)
+  const [recentering, setRecentering] = useState(false)
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status === 'granted') {
+        setLocationReady(true)
+      }
+    })()
+  }, [])
 
   function handleMarkerPress(grifo: Grifo) {
     setSelectedGrifo(grifo)
@@ -121,8 +133,25 @@ export default function MapaScreen() {
     }
   }
 
-  function handleRecenter() {
-    mapRef.current?.animateToRegion(Config.LIMA_CENTER as Region, 800)
+  async function handleRecenter() {
+    setRecentering(true)
+    try {
+      if (locationReady) {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+        mapRef.current?.animateToRegion({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }, 800)
+      } else {
+        mapRef.current?.animateToRegion(Config.LIMA_CENTER as Region, 800)
+      }
+    } catch {
+      mapRef.current?.animateToRegion(Config.LIMA_CENTER as Region, 800)
+    } finally {
+      setRecentering(false)
+    }
   }
 
   const filteredGrifos = searchText
@@ -137,10 +166,13 @@ export default function MapaScreen() {
     <View style={styles.container}>
       <MapView
         ref={mapRef}
+        provider={PROVIDER_DEFAULT}
         style={styles.map}
         initialRegion={Config.LIMA_CENTER as Region}
-        showsUserLocation
+        showsUserLocation={locationReady}
         showsMyLocationButton={false}
+        showsCompass={false}
+        showsScale={false}
       >
         {filteredGrifos.map(grifo => (
           <GrifoMarker
@@ -152,6 +184,7 @@ export default function MapaScreen() {
         ))}
       </MapView>
 
+      {/* Search bar */}
       <SafeAreaView style={styles.searchOverlay} edges={['top']}>
         <View style={styles.searchBar}>
           <Text style={styles.searchIcon}>🔍</Text>
@@ -170,13 +203,18 @@ export default function MapaScreen() {
         </View>
       </SafeAreaView>
 
-      <TouchableOpacity style={styles.recenterBtn} onPress={handleRecenter} activeOpacity={0.85}>
-        <Text style={styles.recenterIcon}>⊕</Text>
-      </TouchableOpacity>
-
+      {/* Contador */}
       <View style={styles.countBadge}>
         <Text style={styles.countText}>{filteredGrifos.length} grifos</Text>
       </View>
+
+      {/* Botón recentrar */}
+      <TouchableOpacity style={styles.recenterBtn} onPress={handleRecenter} activeOpacity={0.85}>
+        {recentering
+          ? <ActivityIndicator size="small" color={Colors.navy} />
+          : <Text style={styles.recenterIcon}>📍</Text>
+        }
+      </TouchableOpacity>
 
       <GrifoBottomSheet
         grifo={selectedGrifo}
@@ -231,6 +269,25 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     padding: 4,
   },
+  countBadge: {
+    position: 'absolute',
+    bottom: 200,
+    left: 16,
+    backgroundColor: Colors.navy,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  countText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   recenterBtn: {
     position: 'absolute',
     bottom: 200,
@@ -250,26 +307,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   recenterIcon: {
-    fontSize: 24,
-    color: Colors.navy,
-  },
-  countBadge: {
-    position: 'absolute',
-    bottom: 200,
-    left: 16,
-    backgroundColor: Colors.navy,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  countText: {
-    color: Colors.white,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 22,
   },
 })

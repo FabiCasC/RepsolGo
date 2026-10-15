@@ -42,6 +42,18 @@ module.exports = {
           faceIDPermission: 'Allow RepsolGo to use Face ID.',
         },
       ],
+      [
+        'react-native-maps',
+        {
+          googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY ?? '',
+        },
+      ],
+      [
+        'expo-location',
+        {
+          locationAlwaysAndWhenInUsePermission: 'Permite a RepsolGo acceder a tu ubicación para mostrarte los grifos cercanos.',
+        },
+      ],
     ],
     scheme: 'repsolgo',
     newArchEnabled: true,
