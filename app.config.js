@@ -1,5 +1,9 @@
-const { config } = require('dotenv');
-config();
+try {
+  const { config } = require('dotenv');
+  config();
+} catch (e) {
+  // dotenv not available, env vars must be set manually
+}
 
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = {
