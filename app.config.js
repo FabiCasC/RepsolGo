@@ -5,7 +5,7 @@ config();
 module.exports = {
   expo: {
     name: 'RepsolGo',
-    slug: 'repsolgo',
+    slug: 'repsol-go',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
