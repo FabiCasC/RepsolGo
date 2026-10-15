@@ -12,6 +12,7 @@ export default function ResetPasswordScreen() {
   const [codes, setCodes] = useState(['', '', '', '', '', '']);
   const [newPw, setNewPw] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [errors, setErrors] = useState<{ code?: string; newPw?: string; confirm?: string }>({});
   const [loading, setLoading] = useState(false);
   const inputs = useRef<TextInput[]>([]);
   const { resetPassword } = useAuthStore();
@@ -25,18 +26,30 @@ export default function ResetPasswordScreen() {
     if (!digit && idx > 0) inputs.current[idx - 1]?.focus();
   }
 
-  async function handleReset() {
+  function validate() {
+    const e: typeof errors = {};
     const code = codes.join('');
-    if (code.length < 6) { Alert.alert('Error', 'Ingresa el código de 6 dígitos'); return; }
-    if (!newPw || newPw !== confirm) { Alert.alert('Error', 'Las contraseñas no coinciden'); return; }
+    if (code.length < 6) e.code = 'Ingresa el código de 6 dígitos';
+    if (!newPw) e.newPw = 'Ingresa tu nueva contraseña';
+    else if (newPw.length < 6) e.newPw = 'La contraseña debe tener al menos 6 caracteres';
+    else if (newPw.length > 20) e.newPw = 'La contraseña no puede tener más de 20 caracteres';
+    if (!confirm) e.confirm = 'Confirma tu contraseña';
+    else if (newPw !== confirm) e.confirm = 'Las contraseñas no coinciden';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  async function handleReset() {
+    if (!validate()) return;
+    const code = codes.join('');
     setLoading(true);
     try {
       await resetPassword(email, code, newPw);
-      Alert.alert('¡Listo!', 'Contraseña actualizada', [
-        { text: 'OK', onPress: () => router.replace('/(auth)/login') },
+      Alert.alert('¡Listo!', 'Contraseña actualizada correctamente', [
+        { text: 'Iniciar sesión', onPress: () => router.replace('/(auth)/login') },
       ]);
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      setErrors(prev => ({ ...prev, code: e.message }));
     } finally {
       setLoading(false);
     }
@@ -55,40 +68,45 @@ export default function ResetPasswordScreen() {
 
         <View style={styles.card}>
           <Text style={styles.sectionLabel}>Código de verificación</Text>
-          <View style={styles.codeRow}>
+          <View style={[styles.codeRow, errors.code ? styles.codeRowError : null]}>
             {codes.map((c, i) => (
               <TextInput
                 key={i}
                 ref={r => { if (r) inputs.current[i] = r; }}
-                style={styles.codeInput}
+                style={[styles.codeInput, errors.code ? styles.codeInputError : null]}
                 value={c}
-                onChangeText={v => handleCodeChange(v, i)}
+                onChangeText={v => { handleCodeChange(v, i); setErrors(p => ({ ...p, code: '' })); }}
                 keyboardType="number-pad"
                 maxLength={1}
                 selectTextOnFocus
               />
             ))}
           </View>
+          {errors.code ? <Text style={styles.errorText}>{errors.code}</Text> : null}
 
           <Text style={styles.label}>Nueva contraseña</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.newPw ? styles.inputError : null]}
             value={newPw}
-            onChangeText={setNewPw}
+            onChangeText={v => { setNewPw(v); setErrors(p => ({ ...p, newPw: '' })); }}
             secureTextEntry
             placeholder="Mínimo 6 caracteres"
             placeholderTextColor={Colors.textMuted}
+            maxLength={20}
           />
+          {errors.newPw ? <Text style={styles.errorText}>{errors.newPw}</Text> : null}
 
           <Text style={styles.label}>Confirmar contraseña</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.confirm ? styles.inputError : null]}
             value={confirm}
-            onChangeText={setConfirm}
+            onChangeText={v => { setConfirm(v); setErrors(p => ({ ...p, confirm: '' })); }}
             secureTextEntry
             placeholder="Repite tu contraseña"
             placeholderTextColor={Colors.textMuted}
+            maxLength={20}
           />
+          {errors.confirm ? <Text style={styles.errorText}>{errors.confirm}</Text> : null}
 
           <TouchableOpacity style={styles.btn} onPress={handleReset} disabled={loading}>
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Actualizar contraseña</Text>}
@@ -111,18 +129,22 @@ const styles = StyleSheet.create({
     flex: 1, padding: 28, paddingTop: 32,
   },
   sectionLabel: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary, marginBottom: 16 },
-  codeRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 28 },
+  codeRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  codeRowError: { marginBottom: 4 },
   codeInput: {
     width: 48, height: 56, borderRadius: 12, borderWidth: 2, borderColor: Colors.border,
     textAlign: 'center', fontSize: 22, fontWeight: '700', color: Colors.navy,
     backgroundColor: Colors.surface,
   },
+  codeInputError: { borderColor: Colors.red },
   label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 },
   input: {
     borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
     paddingHorizontal: 16, paddingVertical: 12, fontSize: 15,
-    color: Colors.textPrimary, marginBottom: 16, backgroundColor: Colors.surface,
+    color: Colors.textPrimary, marginBottom: 8, backgroundColor: Colors.surface,
   },
+  inputError: { borderColor: Colors.red },
+  errorText: { color: Colors.red, fontSize: 12, marginBottom: 10 },
   btn: { backgroundColor: Colors.orange, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 8 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

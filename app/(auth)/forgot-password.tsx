@@ -9,18 +9,32 @@ import { Colors } from '@/src/constants/colors';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [codeSent, setCodeSent] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const { requestRecoveryCode } = useAuthStore();
 
+  function validateEmail(v: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  }
+
   async function handleSend() {
-    if (!email.trim()) { Alert.alert('Error', 'Ingresa tu correo'); return; }
+    if (!email.trim()) { setEmailError('Ingresa tu correo'); return; }
+    if (!validateEmail(email.trim())) { setEmailError('Correo electrónico inválido'); return; }
+    setEmailError('');
     setLoading(true);
     try {
-      await requestRecoveryCode(email.trim());
+      const code = await requestRecoveryCode(email.trim().toLowerCase());
+      setCodeSent(true);
       startCooldown();
-      router.push({ pathname: '/(auth)/reset-password', params: { email: email.trim() } });
+      // Mostrar el código mock en pantalla (solo para demo)
+      Alert.alert(
+        '📩 Código de verificación',
+        `Tu código es: ${code}\n\n(En producción esto llegaría a tu correo)`,
+        [{ text: 'Continuar', onPress: () => router.push({ pathname: '/(auth)/reset-password', params: { email: email.trim().toLowerCase() } }) }],
+      );
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -59,14 +73,16 @@ export default function ForgotPasswordScreen() {
 
           <Text style={styles.label}>Correo electrónico</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, emailError ? styles.inputError : null]}
             value={email}
-            onChangeText={setEmail}
+            onChangeText={v => { setEmail(v); setEmailError(''); }}
             keyboardType="email-address"
             autoCapitalize="none"
             placeholder="correo@ejemplo.com"
             placeholderTextColor={Colors.textMuted}
+            maxLength={80}
           />
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
           <TouchableOpacity
             style={[styles.btn, (loading || cooldown > 0) && styles.btnDisabled]}
@@ -106,6 +122,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, fontSize: 15,
     color: Colors.textPrimary, marginBottom: 24, backgroundColor: Colors.surface,
   },
+  inputError: { borderColor: Colors.red },
+  errorText: { color: Colors.red, fontSize: 12, marginTop: -8, marginBottom: 10 },
   btn: { backgroundColor: Colors.orange, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
   btnDisabled: { opacity: 0.5 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
