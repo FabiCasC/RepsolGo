@@ -1,385 +1,156 @@
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native'
-import { useRouter } from 'expo-router'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { Colors } from '../../src/constants/colors'
-import { Button } from '../../src/components/ui/Button'
-import { Input } from '../../src/components/ui/Input'
-import { useAuthStore } from '../../src/store/auth.store'
-
-function LocationIcon() {
-  return (
-    <View style={styles.iconSvg}>
-      <View style={styles.pin} />
-      <View style={styles.pinTail} />
-    </View>
-  )
-}
-
-function EmailIcon() {
-  return (
-    <View style={iconStyles.container}>
-      <View style={iconStyles.envelope}>
-        <View style={iconStyles.envelopeLine} />
-      </View>
-    </View>
-  )
-}
-
-function LockIcon() {
-  return (
-    <View style={lockStyles.container}>
-      <View style={lockStyles.shackle} />
-      <View style={lockStyles.body} />
-    </View>
-  )
-}
-
-function EyeIcon({ visible }: { visible: boolean }) {
-  return (
-    <View style={eyeStyles.container}>
-      <View style={eyeStyles.eye} />
-      {!visible && <View style={eyeStyles.slash} />}
-    </View>
-  )
-}
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
+} from 'react-native';
+import { router } from 'expo-router';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useAuthStore } from '@/src/store/auth.store';
+import { Colors } from '@/src/constants/colors';
 
 export default function LoginScreen() {
-  const router = useRouter()
-  const login = useAuthStore(state => state.login)
-  const isLoading = useAuthStore(state => state.isLoading)
+  const [email, setEmail] = useState('fabiana.castroc22@gmail.com');
+  const [password, setPassword] = useState('123456');
+  const [showPw, setShowPw] = useState(false);
+  const { login, isLoading, biometricEnabled, token } = useAuthStore();
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+  useEffect(() => {
+    if (token) router.replace('/(app)/mapa');
+  }, [token]);
 
-  function validate() {
-    const errs: { email?: string; password?: string } = {}
-    if (!email) errs.email = 'El email es requerido'
-    else if (!/\S+@\S+\.\S+/.test(email)) errs.email = 'Email inválido'
-    if (!password) errs.password = 'La contraseña es requerida'
-    setErrors(errs)
-    return Object.keys(errs).length === 0
+  useEffect(() => {
+    if (biometricEnabled) tryBiometric();
+  }, [biometricEnabled]);
+
+  async function tryBiometric() {
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Accede con tu huella o rostro',
+      cancelLabel: 'Usar contraseña',
+    });
+    if (result.success) router.replace('/(app)/mapa');
   }
 
   async function handleLogin() {
-    if (!validate()) return
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Completa todos los campos');
+      return;
+    }
     try {
-      await login(email, password)
-      router.replace('/(app)/mapa')
-    } catch {
-      Alert.alert('Error', 'Credenciales incorrectas. Intenta de nuevo.')
+      await login(email.trim(), password);
+      router.replace('/(app)/mapa');
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
     }
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.hero}>
-            <View style={styles.logoCircle}>
-              <View style={styles.logoInner}>
-                <View style={styles.logoPinBody} />
-                <View style={styles.logoPinTail} />
-              </View>
-            </View>
-            <Text style={styles.appName}>RepsolGo</Text>
-            <Text style={styles.tagline}>Tu compañero de ruta con Repsol</Text>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={styles.logoBox}>
+            <Text style={styles.logoText}>R</Text>
           </View>
+          <Text style={styles.brand}>RepsolGo</Text>
+          <Text style={styles.subtitle}>Tu app de energía en Perú</Text>
+        </View>
 
-          <View style={styles.form}>
-            <Text style={styles.formTitle}>Bienvenido de vuelta</Text>
-            <Text style={styles.formSubtitle}>Inicia sesión en tu cuenta</Text>
+        {/* Card */}
+        <View style={styles.card}>
+          <Text style={styles.title}>Iniciar sesión</Text>
 
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="tu@email.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              error={errors.email}
-              leftIcon={<EmailIcon />}
-            />
-            <Input
-              label="Contraseña"
+          <Text style={styles.label}>Correo electrónico</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholder="correo@ejemplo.com"
+            placeholderTextColor={Colors.textMuted}
+          />
+
+          <Text style={styles.label}>Contraseña</Text>
+          <View style={styles.pwRow}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
               value={password}
               onChangeText={setPassword}
-              placeholder="Tu contraseña"
-              secureTextEntry={!showPassword}
-              error={errors.password}
-              leftIcon={<LockIcon />}
-              rightIcon={<EyeIcon visible={showPassword} />}
-              onRightIconPress={() => setShowPassword(!showPassword)}
+              secureTextEntry={!showPw}
+              placeholder="••••••"
+              placeholderTextColor={Colors.textMuted}
             />
-
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/forgot-password')}
-              style={styles.forgotBtn}
-            >
-              <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPw(v => !v)}>
+              <Text style={{ color: Colors.navy }}>{showPw ? '🙈' : '👁️'}</Text>
             </TouchableOpacity>
-
-            <Button
-              label="Iniciar sesión"
-              onPress={handleLogin}
-              loading={isLoading}
-              fullWidth
-              style={styles.loginBtn}
-            />
-
-            <View style={styles.separatorRow}>
-              <View style={styles.separatorLine} />
-              <Text style={styles.separatorText}>o continúa con</Text>
-              <View style={styles.separatorLine} />
-            </View>
-
-            <TouchableOpacity style={styles.googleBtn} activeOpacity={0.85}>
-              <Text style={styles.googleIcon}>G</Text>
-              <Text style={styles.googleText}>Continuar con Google</Text>
-            </TouchableOpacity>
-
-            <View style={styles.registerRow}>
-              <Text style={styles.registerText}>¿No tienes cuenta? </Text>
-              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-                <Text style={styles.registerLink}>Regístrate gratis</Text>
-              </TouchableOpacity>
-            </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  )
+
+          <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
+            <Text style={styles.forgotLink}>¿Olvidaste tu contraseña?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.btnPrimary} onPress={handleLogin} disabled={isLoading}>
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnPrimaryText}>Ingresar</Text>
+            )}
+          </TouchableOpacity>
+
+          {biometricEnabled && (
+            <TouchableOpacity style={styles.btnOutline} onPress={tryBiometric}>
+              <Text style={styles.btnOutlineText}>🔒 Usar biometría</Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.registerRow}>
+            <Text style={styles.registerText}>¿No tienes cuenta? </Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+              <Text style={styles.registerLink}>Regístrate</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.white,
+  container: { flexGrow: 1, backgroundColor: Colors.navy },
+  hero: { alignItems: 'center', paddingTop: 80, paddingBottom: 40 },
+  logoBox: {
+    width: 72, height: 72, borderRadius: 20,
+    backgroundColor: Colors.orange, alignItems: 'center', justifyContent: 'center',
+    marginBottom: 12,
   },
-  flex: {
-    flex: 1,
+  logoText: { color: '#fff', fontSize: 36, fontWeight: '800' },
+  brand: { color: '#fff', fontSize: 28, fontWeight: '800', letterSpacing: 1 },
+  subtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
+  card: {
+    backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    flex: 1, padding: 28, paddingTop: 32,
   },
-  scroll: {
-    flexGrow: 1,
+  title: { fontSize: 22, fontWeight: '700', color: Colors.navy, marginBottom: 24 },
+  label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 },
+  input: {
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 12, fontSize: 15,
+    color: Colors.textPrimary, marginBottom: 16, backgroundColor: Colors.surface,
   },
-  hero: {
-    backgroundColor: Colors.navy,
-    paddingTop: 40,
-    paddingBottom: 48,
-    alignItems: 'center',
+  pwRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  eyeBtn: { padding: 12, marginLeft: 4 },
+  forgotLink: { color: Colors.orange, fontSize: 13, fontWeight: '600', marginBottom: 24, textAlign: 'right' },
+  btnPrimary: {
+    backgroundColor: Colors.orange, borderRadius: 14, paddingVertical: 15,
+    alignItems: 'center', marginBottom: 12,
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.orange,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: Colors.orange,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+  btnPrimaryText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  btnOutline: {
+    borderWidth: 1.5, borderColor: Colors.navy, borderRadius: 14, paddingVertical: 14,
+    alignItems: 'center', marginBottom: 12,
   },
-  logoInner: {
-    alignItems: 'center',
-  },
-  logoPinBody: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.white,
-  },
-  logoPinTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 12,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: Colors.white,
-    marginTop: -2,
-  },
-  appName: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: Colors.white,
-    letterSpacing: -0.5,
-  },
-  tagline: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 6,
-  },
-  form: {
-    padding: 24,
-    flex: 1,
-  },
-  formTitle: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 6,
-  },
-  formSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 28,
-  },
-  forgotBtn: {
-    alignSelf: 'flex-end',
-    marginTop: -8,
-    marginBottom: 20,
-  },
-  forgotText: {
-    fontSize: 13,
-    color: Colors.orange,
-    fontWeight: '500',
-  },
-  loginBtn: {
-    marginBottom: 20,
-  },
-  separatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  separatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.border,
-  },
-  separatorText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginHorizontal: 12,
-  },
-  googleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
-    marginBottom: 24,
-  },
-  googleIcon: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#4285F4',
-    marginRight: 10,
-  },
-  googleText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: Colors.textPrimary,
-  },
-  registerRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  registerText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  registerLink: {
-    fontSize: 14,
-    color: Colors.orange,
-    fontWeight: '600',
-  },
-  iconSvg: {},
-  pin: {},
-  pinTail: {},
-})
-
-const iconStyles = StyleSheet.create({
-  container: {
-    width: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  envelope: {
-    width: 16,
-    height: 12,
-    borderWidth: 1.5,
-    borderColor: Colors.textMuted,
-    borderRadius: 2,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 2,
-  },
-  envelopeLine: {
-    width: 10,
-    height: 1.5,
-    backgroundColor: Colors.textMuted,
-  },
-})
-
-const lockStyles = StyleSheet.create({
-  container: {
-    width: 18,
-    height: 18,
-    alignItems: 'center',
-  },
-  shackle: {
-    width: 10,
-    height: 6,
-    borderWidth: 1.5,
-    borderColor: Colors.textMuted,
-    borderBottomWidth: 0,
-    borderRadius: 5,
-  },
-  body: {
-    width: 14,
-    height: 10,
-    backgroundColor: Colors.textMuted,
-    borderRadius: 2,
-  },
-})
-
-const eyeStyles = StyleSheet.create({
-  container: {
-    width: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  eye: {
-    width: 16,
-    height: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.textMuted,
-    borderRadius: 8,
-  },
-  slash: {
-    position: 'absolute',
-    width: 18,
-    height: 1.5,
-    backgroundColor: Colors.textMuted,
-    transform: [{ rotate: '-35deg' }],
-  },
-})
+  btnOutlineText: { color: Colors.navy, fontSize: 15, fontWeight: '600' },
+  registerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
+  registerText: { color: Colors.textSecondary, fontSize: 14 },
+  registerLink: { color: Colors.orange, fontSize: 14, fontWeight: '700' },
+});

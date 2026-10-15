@@ -1,5 +1,7 @@
-import { Redirect } from 'expo-router'
+import { Redirect } from 'expo-router';
+import { useAuthStore } from '@/src/store/auth.store';
 
 export default function Index() {
-  return <Redirect href="/(auth)/login" />
+  const token = useAuthStore(s => s.token);
+  return <Redirect href={token ? '/(app)/mapa' : '/(auth)/login'} />;
 }

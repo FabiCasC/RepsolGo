@@ -1,0 +1,50 @@
+import 'dotenv/config';
+
+export default {
+  expo: {
+    name: 'RepsolGo',
+    slug: 'repsolgo',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/icon.png',
+    userInterfaceStyle: 'light',
+    splash: {
+      image: './assets/splash.png',
+      resizeMode: 'contain',
+      backgroundColor: '#041E42',
+    },
+    android: {
+      adaptiveIcon: {
+        foregroundImage: './assets/adaptive-icon.png',
+        backgroundColor: '#041E42',
+      },
+      package: 'com.repsolperu.repsolgo',
+      permissions: [
+        'CAMERA',
+        'ACCESS_FINE_LOCATION',
+        'ACCESS_COARSE_LOCATION',
+        'USE_BIOMETRIC',
+        'USE_FINGERPRINT',
+      ],
+      config: {
+        googleMaps: {
+          apiKey: process.env.GOOGLE_MAPS_API_KEY,
+        },
+      },
+    },
+    plugins: [
+      'expo-router',
+      'expo-secure-store',
+      [
+        'expo-local-authentication',
+        {
+          faceIDPermission: 'Allow RepsolGo to use Face ID.',
+        },
+      ],
+    ],
+    scheme: 'repsolgo',
+    experiments: {
+      typedRoutes: true,
+    },
+  },
+};

@@ -1,191 +1,108 @@
-import React from 'react'
-import { Tabs } from 'expo-router'
-import { View, Text, StyleSheet } from 'react-native'
-import { Colors } from '../../src/constants/colors'
-import { AuthGuard } from '../../src/components/auth/AuthGuard'
+import { Tabs, router } from 'expo-router';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Colors } from '@/src/constants/colors';
+import { useAuthStore } from '@/src/store/auth.store';
 
-function MapIcon({ color }: { color: string }) {
+function TabIcon({ name, focused }: { name: string; focused: boolean }) {
+  const icons: Record<string, string> = {
+    mapa: '🗺️', puntos: '⭐', escanear: '📷', delivery: '🛵', perfil: '👤',
+  };
   return (
-    <View style={tabIconStyles.container}>
-      <View style={[tabIconStyles.mapBody, { borderColor: color }]}>
-        <View style={[tabIconStyles.mapPin, { backgroundColor: color }]} />
+    <View style={{ alignItems: 'center' }}>
+      <View style={[focused && { transform: [{ scale: 1.1 }] }]}>
+        <View style={{ opacity: focused ? 1 : 0.55, fontSize: 22 } as any}>
+          {/* Icon rendered as emoji for simplicity */}
+        </View>
       </View>
     </View>
-  )
-}
-
-function StarIcon({ color }: { color: string }) {
-  return (
-    <View style={tabIconStyles.container}>
-      <Text style={[tabIconStyles.emoji, { color }]}>⭐</Text>
-    </View>
-  )
-}
-
-function CameraIcon({ color }: { color: string }) {
-  return (
-    <View style={[tabIconStyles.scanCircle, { backgroundColor: color === Colors.orange ? Colors.orange : '#374151' }]}>
-      <Text style={tabIconStyles.scanText}>⊙</Text>
-    </View>
-  )
-}
-
-function TrophyIcon({ color }: { color: string }) {
-  return (
-    <View style={tabIconStyles.container}>
-      <Text style={[tabIconStyles.emoji, { color }]}>🏆</Text>
-    </View>
-  )
-}
-
-function UserIcon({ color }: { color: string }) {
-  return (
-    <View style={tabIconStyles.container}>
-      <View style={[tabIconStyles.userHead, { backgroundColor: color }]} />
-      <View style={[tabIconStyles.userBody, { backgroundColor: color }]} />
-    </View>
-  )
+  );
 }
 
 export default function AppLayout() {
+  const token = useAuthStore(s => s.token);
+  if (!token) {
+    router.replace('/(auth)/login');
+    return null;
+  }
+
   return (
-    <AuthGuard>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: Colors.orange,
-          tabBarInactiveTintColor: '#9CA3AF',
-          tabBarStyle: {
-            borderTopWidth: 1,
-            borderTopColor: Colors.border,
-            backgroundColor: Colors.white,
-            height: 64,
-            paddingBottom: 8,
-            paddingTop: 6,
-          },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '600',
-          },
-        }}
-      >
-        <Tabs.Screen
-          name="mapa"
-          options={{
-            title: 'Mapa',
-            tabBarIcon: ({ color }) => <MapIcon color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="puntos"
-          options={{
-            title: 'Puntos',
-            tabBarIcon: ({ color }) => <StarIcon color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="escanear"
-          options={{
-            title: 'Escanear',
-            tabBarIcon: () => (
-              <View style={tabIconStyles.scanWrapper}>
-                <View style={tabIconStyles.scanButton}>
-                  <Text style={tabIconStyles.scanButtonText}>⊙</Text>
-                </View>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: Colors.orange,
+        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: Colors.border,
+          height: 64,
+          paddingBottom: 8,
+          paddingTop: 4,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+      }}
+    >
+      <Tabs.Screen
+        name="mapa"
+        options={{ title: 'Mapa', tabBarIcon: ({ color }) => <TabBarIcon emoji="🗺️" color={color} /> }}
+      />
+      <Tabs.Screen
+        name="puntos"
+        options={{ title: 'Puntos', tabBarIcon: ({ color }) => <TabBarIcon emoji="⭐" color={color} /> }}
+      />
+      <Tabs.Screen
+        name="escanear"
+        options={{
+          title: 'Escanear',
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.fabWrap}>
+              <View style={styles.fabBtn}>
+                <TabBarIcon emoji="📷" color="#fff" />
               </View>
-            ),
-            tabBarLabelStyle: {
-              fontSize: 11,
-              fontWeight: '600',
-              color: Colors.orange,
-            },
-          }}
-        />
-        <Tabs.Screen
-          name="retos"
-          options={{
-            title: 'Retos',
-            tabBarIcon: ({ color }) => <TrophyIcon color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="perfil"
-          options={{
-            title: 'Perfil',
-            tabBarIcon: ({ color }) => <UserIcon color={color} />,
-          }}
-        />
-      </Tabs>
-    </AuthGuard>
-  )
+            </View>
+          ),
+          tabBarLabel: () => null,
+        }}
+      />
+      <Tabs.Screen
+        name="delivery"
+        options={{ title: 'Delivery', tabBarIcon: ({ color }) => <TabBarIcon emoji="🛵" color={color} /> }}
+      />
+      <Tabs.Screen
+        name="perfil"
+        options={{ title: 'Perfil', tabBarIcon: ({ color }) => <TabBarIcon emoji="👤" color={color} /> }}
+      />
+      {/* Hidden tabs */}
+      <Tabs.Screen name="retos" options={{ href: null }} />
+    </Tabs>
+  );
 }
 
-const tabIconStyles = StyleSheet.create({
-  container: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emoji: {
-    fontSize: 18,
-  },
-  mapBody: {
-    width: 18,
-    height: 16,
-    borderWidth: 1.5,
-    borderRadius: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapPin: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  userHead: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginBottom: 1,
-  },
-  userBody: {
-    width: 16,
-    height: 8,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  scanCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scanText: {
-    fontSize: 16,
-    color: Colors.white,
-  },
-  scanWrapper: {
-    marginTop: -16,
-  },
-  scanButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+function TabBarIcon({ emoji, color }: { emoji: string; color: string }) {
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: 28, height: 28 }}>
+      <View style={{ opacity: color === Colors.orange ? 1 : 0.6 }}>
+        {/* Text component for emoji */}
+        <View>
+          <TabEmoji emoji={emoji} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function TabEmoji({ emoji }: { emoji: string }) {
+  const { Text } = require('react-native');
+  return <Text style={{ fontSize: 22 }}>{emoji}</Text>;
+}
+
+const styles = StyleSheet.create({
+  fabWrap: { alignItems: 'center', justifyContent: 'center', marginTop: -20 },
+  fabBtn: {
+    width: 56, height: 56, borderRadius: 28,
     backgroundColor: Colors.orange,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.orange,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 3,
-    borderColor: Colors.white,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: Colors.orange, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4, shadowRadius: 8, elevation: 8,
   },
-  scanButtonText: {
-    fontSize: 24,
-    color: Colors.white,
-  },
-})
+});

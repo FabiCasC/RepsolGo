@@ -1,234 +1,128 @@
-import React, { useState, useRef } from 'react'
+import { useState, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native'
-import { useRouter } from 'expo-router'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { Colors } from '../../src/constants/colors'
-import { Button } from '../../src/components/ui/Button'
-import { Input } from '../../src/components/ui/Input'
-import { AuthService } from '../../src/services/auth.service'
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
+} from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useAuthStore } from '@/src/store/auth.store';
+import { Colors } from '@/src/constants/colors';
 
 export default function ResetPasswordScreen() {
-  const router = useRouter()
-  const [otp, setOtp] = useState(['', '', '', '', '', ''])
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const { email } = useLocalSearchParams<{ email: string }>();
+  const [codes, setCodes] = useState(['', '', '', '', '', '']);
+  const [newPw, setNewPw] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const inputs = useRef<TextInput[]>([]);
+  const { resetPassword } = useAuthStore();
 
-  const inputRefs = useRef<Array<TextInput | null>>([null, null, null, null, null, null])
-
-  function handleOtpChange(text: string, index: number) {
-    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 1)
-    const newOtp = [...otp]
-    newOtp[index] = cleaned
-    setOtp(newOtp)
-    if (cleaned && index < 5) {
-      inputRefs.current[index + 1]?.focus()
-    }
-  }
-
-  function handleOtpKeyPress(key: string, index: number) {
-    if (key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus()
-    }
-  }
-
-  function validate() {
-    const errs: Record<string, string> = {}
-    const fullOtp = otp.join('')
-    if (fullOtp.length < 6) errs.otp = 'Ingresa el código completo de 6 dígitos'
-    if (!newPassword) errs.newPassword = 'Ingresa la nueva contraseña'
-    else if (newPassword.length < 6) errs.newPassword = 'Mínimo 6 caracteres'
-    if (newPassword !== confirmPassword) errs.confirmPassword = 'Las contraseñas no coinciden'
-    setErrors(errs)
-    return Object.keys(errs).length === 0
+  function handleCodeChange(val: string, idx: number) {
+    const digit = val.replace(/\D/g, '').slice(-1);
+    const next = [...codes];
+    next[idx] = digit;
+    setCodes(next);
+    if (digit && idx < 5) inputs.current[idx + 1]?.focus();
+    if (!digit && idx > 0) inputs.current[idx - 1]?.focus();
   }
 
   async function handleReset() {
-    if (!validate()) return
-    setLoading(true)
+    const code = codes.join('');
+    if (code.length < 6) { Alert.alert('Error', 'Ingresa el código de 6 dígitos'); return; }
+    if (!newPw || newPw !== confirm) { Alert.alert('Error', 'Las contraseñas no coinciden'); return; }
+    setLoading(true);
     try {
-      await AuthService.resetPassword(otp.join(''), newPassword)
-      Alert.alert('¡Listo!', 'Tu contraseña fue restablecida correctamente.', [
-        { text: 'Iniciar sesión', onPress: () => router.replace('/(auth)/login') },
-      ])
-    } catch {
-      Alert.alert('Error', 'No se pudo restablecer la contraseña. Intenta de nuevo.')
+      await resetPassword(email, code, newPw);
+      Alert.alert('¡Listo!', 'Contraseña actualizada', [
+        { text: 'OK', onPress: () => router.replace('/(auth)/login') },
+      ]);
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.container}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backArrow}>←</Text>
-            </TouchableOpacity>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backText}>← Volver</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Nueva contraseña</Text>
+          <Text style={styles.subtitle}>Código enviado a {email}</Text>
+        </View>
 
-            <Text style={styles.title}>Restablecer contraseña</Text>
-            <Text style={styles.subtitle}>
-              Ingresa el código de 6 dígitos que enviamos a tu email.
-            </Text>
-
-            <View style={styles.otpContainer}>
-              {otp.map((digit, i) => (
-                <TextInput
-                  key={i}
-                  ref={ref => { inputRefs.current[i] = ref }}
-                  style={[styles.otpInput, digit ? styles.otpInputFilled : null]}
-                  value={digit}
-                  onChangeText={text => handleOtpChange(text, i)}
-                  onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, i)}
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  selectTextOnFocus
-                />
-              ))}
-            </View>
-            {errors.otp ? <Text style={styles.errorText}>{errors.otp}</Text> : null}
-
-            <View style={styles.passwordSection}>
-              <Input
-                label="Nueva contraseña"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Mínimo 6 caracteres"
-                secureTextEntry
-                error={errors.newPassword}
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Código de verificación</Text>
+          <View style={styles.codeRow}>
+            {codes.map((c, i) => (
+              <TextInput
+                key={i}
+                ref={r => { if (r) inputs.current[i] = r; }}
+                style={styles.codeInput}
+                value={c}
+                onChangeText={v => handleCodeChange(v, i)}
+                keyboardType="number-pad"
+                maxLength={1}
+                selectTextOnFocus
               />
-              <Input
-                label="Confirmar contraseña"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Repite tu contraseña"
-                secureTextEntry
-                error={errors.confirmPassword}
-              />
-            </View>
-
-            <Button
-              label="Restablecer contraseña"
-              onPress={handleReset}
-              loading={loading}
-              fullWidth
-            />
-
-            <TouchableOpacity onPress={() => router.back()} style={styles.resendBtn}>
-              <Text style={styles.resendText}>¿No recibiste el código? </Text>
-              <Text style={styles.resendLink}>Reenviar</Text>
-            </TouchableOpacity>
+            ))}
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  )
+
+          <Text style={styles.label}>Nueva contraseña</Text>
+          <TextInput
+            style={styles.input}
+            value={newPw}
+            onChangeText={setNewPw}
+            secureTextEntry
+            placeholder="Mínimo 6 caracteres"
+            placeholderTextColor={Colors.textMuted}
+          />
+
+          <Text style={styles.label}>Confirmar contraseña</Text>
+          <TextInput
+            style={styles.input}
+            value={confirm}
+            onChangeText={setConfirm}
+            secureTextEntry
+            placeholder="Repite tu contraseña"
+            placeholderTextColor={Colors.textMuted}
+          />
+
+          <TouchableOpacity style={styles.btn} onPress={handleReset} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Actualizar contraseña</Text>}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.white,
+  container: { flex: 1, backgroundColor: Colors.navy },
+  header: { padding: 28, paddingTop: 56 },
+  backBtn: { marginBottom: 16 },
+  backText: { color: 'rgba(255,255,255,0.8)', fontSize: 14 },
+  title: { color: '#fff', fontSize: 26, fontWeight: '800' },
+  subtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
+  card: {
+    backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    flex: 1, padding: 28, paddingTop: 32,
   },
-  flex: {
-    flex: 1,
-  },
-  scroll: {
-    flexGrow: 1,
-    paddingBottom: 40,
-  },
-  container: {
-    flex: 1,
-    padding: 24,
-    paddingTop: 20,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  backArrow: {
-    color: Colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: 32,
-  },
-  otpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  otpInput: {
-    width: 48,
-    height: 56,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: 12,
-    textAlign: 'center',
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+  sectionLabel: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary, marginBottom: 16 },
+  codeRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 28 },
+  codeInput: {
+    width: 48, height: 56, borderRadius: 12, borderWidth: 2, borderColor: Colors.border,
+    textAlign: 'center', fontSize: 22, fontWeight: '700', color: Colors.navy,
     backgroundColor: Colors.surface,
   },
-  otpInputFilled: {
-    borderColor: Colors.orange,
-    backgroundColor: '#FFF3E0',
+  label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 },
+  input: {
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 12, fontSize: 15,
+    color: Colors.textPrimary, marginBottom: 16, backgroundColor: Colors.surface,
   },
-  errorText: {
-    fontSize: 12,
-    color: Colors.red,
-    marginBottom: 8,
-  },
-  passwordSection: {
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  resendBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  resendText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  resendLink: {
-    fontSize: 14,
-    color: Colors.orange,
-    fontWeight: '600',
-  },
-})
+  btn: { backgroundColor: Colors.orange, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 8 },
+  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+});
