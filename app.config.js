@@ -44,6 +44,14 @@ module.exports = {
           faceIDPermission: 'Allow RepsolGo to use Face ID.',
         },
       ],
+      [
+        'expo-build-properties',
+        {
+          android: {
+            kotlinVersion: '1.9.24',
+          },
+        },
+      ],
     ],
     scheme: 'repsolgo',
     experiments: {
