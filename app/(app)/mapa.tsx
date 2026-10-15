@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native'
-import MapView, { Region, PROVIDER_DEFAULT } from 'react-native-maps'
+import MapView, { Region } from 'react-native-maps'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Location from 'expo-location'
 import { Colors } from '../../src/constants/colors'
@@ -166,7 +167,6 @@ export default function MapaScreen() {
     <View style={styles.container}>
       <MapView
         ref={mapRef}
-        provider={PROVIDER_DEFAULT}
         style={styles.map}
         initialRegion={Config.LIMA_CENTER as Region}
         showsUserLocation={locationReady}
@@ -225,12 +225,17 @@ export default function MapaScreen() {
   )
 }
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
   },
   map: {
-    ...StyleSheet.absoluteFillObject,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
   },
   searchOverlay: {
     position: 'absolute',

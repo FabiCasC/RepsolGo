@@ -56,7 +56,7 @@ module.exports = {
       ],
     ],
     scheme: 'repsolgo',
-    newArchEnabled: true,
+    newArchEnabled: false,
     experiments: {
       typedRoutes: false,
     },
