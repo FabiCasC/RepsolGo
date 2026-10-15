@@ -7,12 +7,18 @@ import { router } from 'expo-router';
 import { useAuthStore, UserRole } from '@/src/store/auth.store';
 import { Colors } from '@/src/constants/colors';
 
-const ROLES: { value: UserRole; label: string }[] = [
-  { value: 'cliente', label: 'Cliente' },
-  { value: 'repartidor', label: 'Repartidor' },
-  { value: 'operador', label: 'Operador' },
-  { value: 'supervisor', label: 'Supervisor' },
+const ROLES: { value: UserRole; label: string; desc: string }[] = [
+  { value: 'cliente', label: 'Cliente', desc: 'Carga combustible y acumula puntos' },
+  { value: 'operario', label: 'Operario de grifo', desc: 'Gestiona turnos e incidencias' },
 ];
+
+function validateEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function validatePhone(phone: string) {
+  return /^9\d{8}$/.test(phone.replace(/\s/g, ''));
+}
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -21,20 +27,30 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [role, setRole] = useState<UserRole>('cliente');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const { register, isLoading } = useAuthStore();
 
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!name.trim() || name.trim().length < 3) e.name = 'Ingresa tu nombre completo (mínimo 3 caracteres)';
+    if (!email.trim()) e.email = 'Ingresa tu correo';
+    else if (!validateEmail(email.trim())) e.email = 'Correo electrónico inválido';
+    if (!phone.trim()) e.phone = 'Ingresa tu teléfono';
+    else if (!validatePhone(phone.trim())) e.phone = 'El teléfono debe comenzar con 9 y tener 9 dígitos';
+    if (!password) e.password = 'Ingresa una contraseña';
+    else if (password.length < 6) e.password = 'La contraseña debe tener al menos 6 caracteres';
+    else if (password.length > 20) e.password = 'La contraseña no puede tener más de 20 caracteres';
+    if (!confirm) e.confirm = 'Confirma tu contraseña';
+    else if (password !== confirm) e.confirm = 'Las contraseñas no coinciden';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
   async function handleRegister() {
-    if (!name.trim() || !email.trim() || !phone.trim() || !password) {
-      Alert.alert('Error', 'Completa todos los campos');
-      return;
-    }
-    if (password !== confirm) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
-      return;
-    }
+    if (!validate()) return;
     try {
-      await register(name.trim(), email.trim(), phone.trim(), password, role);
-      router.replace('/(app)/mapa');
+      await register(name.trim(), email.trim().toLowerCase(), phone.trim(), password, role);
+      router.replace(role === 'operario' ? '/(app)/escanear' : '/(app)/mapa');
     } catch (e: any) {
       Alert.alert('Error', e.message);
     }
@@ -52,46 +68,68 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.card}>
-          {[
-            { label: 'Nombre completo', value: name, set: setName, placeholder: 'Tu nombre', keyboard: 'default' as const },
-            { label: 'Correo electrónico', value: email, set: setEmail, placeholder: 'correo@ejemplo.com', keyboard: 'email-address' as const },
-            { label: 'Teléfono', value: phone, set: setPhone, placeholder: '9XXXXXXXX', keyboard: 'phone-pad' as const },
-          ].map(f => (
-            <View key={f.label}>
-              <Text style={styles.label}>{f.label}</Text>
-              <TextInput
-                style={styles.input}
-                value={f.value}
-                onChangeText={f.set}
-                placeholder={f.placeholder}
-                placeholderTextColor={Colors.textMuted}
-                keyboardType={f.keyboard}
-                autoCapitalize={f.keyboard === 'email-address' ? 'none' : 'words'}
-              />
-            </View>
-          ))}
+          <Text style={styles.label}>Nombre completo</Text>
+          <TextInput
+            style={[styles.input, errors.name ? styles.inputError : null]}
+            value={name}
+            onChangeText={v => { setName(v); setErrors(p => ({ ...p, name: '' })); }}
+            placeholder="Tu nombre completo"
+            placeholderTextColor={Colors.textMuted}
+            autoCapitalize="words"
+            maxLength={60}
+          />
+          {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
+
+          <Text style={styles.label}>Correo electrónico</Text>
+          <TextInput
+            style={[styles.input, errors.email ? styles.inputError : null]}
+            value={email}
+            onChangeText={v => { setEmail(v); setErrors(p => ({ ...p, email: '' })); }}
+            placeholder="correo@ejemplo.com"
+            placeholderTextColor={Colors.textMuted}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            maxLength={80}
+          />
+          {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+
+          <Text style={styles.label}>Teléfono</Text>
+          <TextInput
+            style={[styles.input, errors.phone ? styles.inputError : null]}
+            value={phone}
+            onChangeText={v => { setPhone(v); setErrors(p => ({ ...p, phone: '' })); }}
+            placeholder="9XXXXXXXX"
+            placeholderTextColor={Colors.textMuted}
+            keyboardType="phone-pad"
+            maxLength={9}
+          />
+          {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
 
           <Text style={styles.label}>Contraseña</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.password ? styles.inputError : null]}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={v => { setPassword(v); setErrors(p => ({ ...p, password: '' })); }}
             secureTextEntry
             placeholder="Mínimo 6 caracteres"
             placeholderTextColor={Colors.textMuted}
+            maxLength={20}
           />
+          {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
 
           <Text style={styles.label}>Confirmar contraseña</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.confirm ? styles.inputError : null]}
             value={confirm}
-            onChangeText={setConfirm}
+            onChangeText={v => { setConfirm(v); setErrors(p => ({ ...p, confirm: '' })); }}
             secureTextEntry
             placeholder="Repite tu contraseña"
             placeholderTextColor={Colors.textMuted}
+            maxLength={20}
           />
+          {errors.confirm ? <Text style={styles.errorText}>{errors.confirm}</Text> : null}
 
-          <Text style={styles.label}>Perfil</Text>
+          <Text style={styles.label}>Tipo de perfil</Text>
           <View style={styles.rolesRow}>
             {ROLES.map(r => (
               <TouchableOpacity
@@ -101,6 +139,9 @@ export default function RegisterScreen() {
               >
                 <Text style={[styles.roleText, role === r.value && styles.roleTextActive]}>
                   {r.label}
+                </Text>
+                <Text style={[styles.roleDesc, role === r.value && styles.roleDescActive]}>
+                  {r.desc}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -139,14 +180,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, fontSize: 15,
     color: Colors.textPrimary, marginBottom: 16, backgroundColor: Colors.surface,
   },
-  rolesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
+  inputError: { borderColor: Colors.red },
+  errorText: { color: Colors.red, fontSize: 12, marginTop: -10, marginBottom: 10 },
+  rolesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
   roleChip: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+    flex: 1, minWidth: 140, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 14,
     borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface,
   },
   roleChipActive: { backgroundColor: Colors.navy, borderColor: Colors.navy },
-  roleText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
+  roleText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '700' },
   roleTextActive: { color: '#fff' },
+  roleDesc: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  roleDescActive: { color: 'rgba(255,255,255,0.7)' },
   btnPrimary: {
     backgroundColor: Colors.orange, borderRadius: 14, paddingVertical: 15,
     alignItems: 'center', marginBottom: 16,
