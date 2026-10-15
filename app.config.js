@@ -1,6 +1,8 @@
-import 'dotenv/config';
+const { config } = require('dotenv');
+config();
 
-export default {
+/** @type {import('expo/config').ExpoConfig} */
+module.exports = {
   expo: {
     name: 'RepsolGo',
     slug: 'repsolgo',
@@ -28,7 +30,7 @@ export default {
       ],
       config: {
         googleMaps: {
-          apiKey: process.env.GOOGLE_MAPS_API_KEY,
+          apiKey: process.env.GOOGLE_MAPS_API_KEY ?? '',
         },
       },
     },
