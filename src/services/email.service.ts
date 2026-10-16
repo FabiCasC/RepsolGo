@@ -23,14 +23,21 @@ export async function sendRecoveryEmail(toEmail: string, code: string): Promise<
     throw new Error('EMAIL_NOT_CONFIGURED');
   }
 
-  await emailjs.send(
-    EMAILJS_SERVICE_ID,
-    EMAILJS_TEMPLATE_ID,
-    {
-      to_email: toEmail,
-      to_name: toEmail.split('@')[0],
-      code,
-    },
-    { publicKey: EMAILJS_PUBLIC_KEY },
-  );
+  console.log('[EmailJS] Enviando a:', toEmail, '| service:', EMAILJS_SERVICE_ID, '| template:', EMAILJS_TEMPLATE_ID, '| key:', EMAILJS_PUBLIC_KEY);
+  try {
+    const result = await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      {
+        to_email: toEmail,
+        to_name: toEmail.split('@')[0],
+        code,
+      },
+      { publicKey: EMAILJS_PUBLIC_KEY },
+    );
+    console.log('[EmailJS] OK:', result);
+  } catch (err) {
+    console.log('[EmailJS] ERROR:', JSON.stringify(err));
+    throw err;
+  }
 }
