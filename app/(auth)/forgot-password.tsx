@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/src/store/auth.store';
@@ -21,8 +21,9 @@ export default function ForgotPasswordScreen() {
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [sent, setSent] = useState(false);           // true cuando el correo ya fue enviado
-  const [sentEmail, setSentEmail] = useState('');    // email al que se envió
+  const [sent, setSent] = useState(false);
+  const [sentEmail, setSentEmail] = useState('');
+  const [sentCode, setSentCode] = useState('');
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const { requestRecoveryCode } = useAuthStore();
 
@@ -40,17 +41,8 @@ export default function ForgotPasswordScreen() {
       const code = await requestRecoveryCode(dest);
       startCooldown();
       setSentEmail(dest);
+      setSentCode(code);
       setSent(true);
-      // Si el store devuelve el código significa que EmailJS no está configurado → modo demo
-      if (code) {
-        Alert.alert(
-          '📩 Código de verificación (demo)',
-          `Correo de EmailJS no configurado.\n\nTu código es: ${code}`,
-          [{ text: 'Ir a restablecer', onPress: () => goToReset(dest) }],
-        );
-      } else {
-        goToReset(dest);
-      }
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -92,9 +84,16 @@ export default function ForgotPasswordScreen() {
             <>
               <Text style={styles.sentTitle}>¡Código enviado!</Text>
               <Text style={styles.sentDesc}>
-                Revisá tu bandeja de entrada en{'\n'}
+                Enviamos un código a{'\n'}
                 <Text style={styles.sentEmail}>{maskEmail(sentEmail)}</Text>
               </Text>
+
+              {/* Código destacado */}
+              <View style={styles.codeBox}>
+                <Text style={styles.codeLabel}>Tu código de verificación</Text>
+                <Text style={styles.codeValue}>{sentCode}</Text>
+              </View>
+
               <TouchableOpacity
                 style={styles.btnOutline}
                 onPress={() => goToReset(sentEmail)}
@@ -179,6 +178,30 @@ const styles = StyleSheet.create({
   sentTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center', marginBottom: 10 },
   sentDesc: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: 28 },
   sentEmail: { fontWeight: '700', color: Colors.navy },
+  codeBox: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.orange,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  codeLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  codeValue: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: Colors.navy,
+    letterSpacing: 8,
+  },
   btnOutline: {
     borderWidth: 2, borderColor: Colors.orange, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center', marginBottom: 12,
