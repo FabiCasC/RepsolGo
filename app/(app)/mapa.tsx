@@ -165,24 +165,26 @@ export default function MapaScreen() {
 
   return (
     <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        initialRegion={Config.LIMA_CENTER as Region}
-        showsUserLocation={locationReady}
-        showsMyLocationButton={false}
-        showsCompass={false}
-        showsScale={false}
-      >
-        {filteredGrifos.map(grifo => (
-          <GrifoMarker
-            key={grifo.id}
-            grifo={grifo}
-            onPress={handleMarkerPress}
-            selected={selectedGrifo?.id === grifo.id}
-          />
-        ))}
-      </MapView>
+      <View style={styles.mapContainer}>
+        <MapView
+          ref={mapRef}
+          style={StyleSheet.absoluteFillObject}
+          initialRegion={Config.LIMA_CENTER as Region}
+          showsUserLocation={locationReady}
+          showsMyLocationButton={false}
+          showsCompass={false}
+          showsScale={false}
+        >
+          {filteredGrifos.map(grifo => (
+            <GrifoMarker
+              key={grifo.id}
+              grifo={grifo}
+              onPress={handleMarkerPress}
+              selected={selectedGrifo?.id === grifo.id}
+            />
+          ))}
+        </MapView>
+      </View>
 
       {/* Search bar */}
       <SafeAreaView style={styles.searchOverlay} edges={['top']}>
@@ -230,10 +232,11 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
   },
-  map: {
+  mapContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
   },
