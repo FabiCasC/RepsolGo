@@ -1,10 +1,8 @@
 import emailjs from '@emailjs/react-native';
 
-// ─── CONFIGURA ESTOS 3 VALORES EN emailjs.com (ver README abajo) ───────────
-const EMAILJS_SERVICE_ID  = process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID  ?? 'TU_SERVICE_ID';
-const EMAILJS_TEMPLATE_ID = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID ?? 'TU_TEMPLATE_ID';
-const EMAILJS_PUBLIC_KEY  = process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY  ?? 'TU_PUBLIC_KEY';
-// ───────────────────────────────────────────────────────────────────────────
+const EMAILJS_SERVICE_ID  = process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID  ?? 'service_7roj34u';
+const EMAILJS_TEMPLATE_ID = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID ?? 'template_stkof5e';
+const EMAILJS_PUBLIC_KEY  = process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY  ?? 'y_JHgYE7byKqyUdVE';
 
 /**
  * Envía el código de recuperación al correo del usuario.
