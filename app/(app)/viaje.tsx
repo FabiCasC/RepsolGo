@@ -200,9 +200,9 @@ export default function ViajeScreen() {
                   )}
                 </View>
 
-                {grifo.precios.length > 0 && (
+                {(grifo.precios?.length ?? 0) > 0 && (
                   <View style={styles.grifoBottom}>
-                    {grifo.precios.slice(0, 2).map(p => (
+                    {grifo.precios?.slice(0, 2).map(p => (
                       <View key={p.tipo} style={styles.precioChip}>
                         <Text style={styles.precioLabel}>{p.tipo}</Text>
                         {p.precio > 0

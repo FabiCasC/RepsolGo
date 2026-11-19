@@ -1,23 +1,12 @@
-/**
- * PlacesService — versión gratuita (sin Google Maps API)
- *
- * APIs usadas (100% gratuitas, sin clave):
- *  - Nominatim (OSM)   → geocodificación (texto → coords)
- *  - Overpass API      → búsqueda de grifos Repsol por POI
- *  - OSRM              → rutas y direcciones (conducción)
- *
- * Límites:
- *  - Nominatim: 1 req/seg. Siempre enviar User-Agent.
- *  - Overpass:  sin límite estricto, pero cachear resultados.
- *  - OSRM:      servicio público demo.project-osrm.org, razonable para dev.
- */
-
 import { FirestoreService } from './firestore.service'
 import type { Grifo } from '../types'
-import GRIFOS_LIMA from '../data/grifos-lima.json'
 
-// User-Agent requerido por Nominatim (identifica la app)
-const UA = 'RepsolGo/1.0 (proyecto universitario UTP; contacto: repsolgo@utp.edu.pe)'
+const DIRECTIONS_BASE = 'https://maps.googleapis.com/maps/api/directions/json'
+const GEOCODE_BASE = 'https://maps.googleapis.com/maps/api/geocode/json'
+
+function getApiKey(): string {
+  return (global as any).__GOOGLE_MAPS_API_KEY__ ?? process.env.GOOGLE_MAPS_API_KEY ?? ''
+}
 
 export interface LatLng {
   latitude: number
@@ -31,116 +20,59 @@ export interface GrifoRuta extends Grifo {
   duracionTexto: string
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+/** Distancia en metros entre dos puntos (fórmula de Haversine) */
+function haversineMetros(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number }
+): number {
+  const R = 6371000
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const dLat = toRad(b.latitude - a.latitude)
+  const dLon = toRad(b.longitude - a.longitude)
+  const sinDLat = Math.sin(dLat / 2)
+  const sinDLon = Math.sin(dLon / 2)
+  const c =
+    sinDLat * sinDLat +
+    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * sinDLon * sinDLon
+  return R * 2 * Math.asin(Math.sqrt(c))
+}
 
-function mToKm(metros: number): string {
-  if (metros < 1000) return `${metros} m`
+function formatDistancia(metros: number): string {
+  if (metros < 1000) return `${Math.round(metros)} m`
   return `${(metros / 1000).toFixed(1)} km`
 }
 
-function secsToText(segundos: number): string {
-  if (segundos < 60) return `${segundos} seg`
-  const mins = Math.round(segundos / 60)
-  if (mins < 60) return `${mins} min`
-  const h = Math.floor(mins / 60)
-  const m = mins % 60
-  return m > 0 ? `${h}h ${m}min` : `${h}h`
-}
-
-/** Distancia haversine entre dos puntos en metros */
-function haversine(a: LatLng, b: LatLng): number {
-  const R = 6371000
-  const lat1 = (a.latitude * Math.PI) / 180
-  const lat2 = (b.latitude * Math.PI) / 180
-  const dLat = lat2 - lat1
-  const dLng = ((b.longitude - a.longitude) * Math.PI) / 180
-  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))
-}
-
-/** Convierte un elemento Overpass al tipo Grifo */
-function overpassToGrifo(el: any): Grifo {
-  const lat = el.lat ?? el.center?.lat ?? 0
-  const lon = el.lon ?? el.center?.lon ?? 0
-  const tags = el.tags ?? {}
-
-  const nombre = tags.name ?? tags['name:es'] ?? 'Grifo Repsol'
-  const calle = tags['addr:street'] ?? ''
-  const num = tags['addr:housenumber'] ?? ''
-  const distrito = tags['addr:city'] ?? tags['addr:suburb'] ?? ''
-  const direccion = [calle, num, distrito].filter(Boolean).join(', ') || 'Lima, Perú'
-
-  return {
-    id: `osm_${el.type}_${el.id}`,
-    nombre,
-    direccion,
-    latitude: lat,
-    longitude: lon,
-    precios: [
-      { tipo: 'Gasolina 90', precio: 0 },
-      { tipo: 'Gasolina 95', precio: 0 },
-      { tipo: 'Diesel B5', precio: 0 },
-    ],
-    tiempoEspera: '~5 min',
-    abierto24h: tags.opening_hours === '24/7',
-    distancia: '',
-    esFavorito: false,
-    placeId: `${el.type}/${el.id}`,
-    rating: 0,
-  }
-}
-
-// ─── Service ─────────────────────────────────────────────────────────────────
-
 export const PlacesService = {
   /**
-   * Geocodifica texto → coords usando Nominatim (OSM).
-   * Límite: 1 req/seg. Siempre envía User-Agent.
-   */
-  async geocodificar(texto: string): Promise<LatLng | null> {
-    try {
-      const url =
-        `https://nominatim.openstreetmap.org/search` +
-        `?q=${encodeURIComponent(texto + ', Peru')}` +
-        `&format=json&limit=1&addressdetails=0`
-
-      const res = await fetch(url, {
-        headers: { 'User-Agent': UA, Accept: 'application/json' },
-      })
-      const data = await res.json()
-
-      if (Array.isArray(data) && data.length > 0) {
-        return {
-          latitude: parseFloat(data[0].lat),
-          longitude: parseFloat(data[0].lon),
-        }
-      }
-    } catch (err) {
-      console.error('[PlacesService] Nominatim error:', err)
-    }
-    return null
-  },
-
-  /**
-   * Devuelve grifos Repsol ordenados por distancia al usuario.
-   * Usa datos locales (Lima) para carga instantánea — sin esperar APIs externas.
+   * Busca grifos Repsol reales cerca de una ubicación.
+   * Usa el JSON local (grifos-lima.json) con haversine — sin red requerida.
    */
   async buscarGrifosCercanos(
     ubicacion: LatLng,
-    _radioMetros = 10000
+    radioMetros = 15000
   ): Promise<Grifo[]> {
-    // Calcular distancia a cada grifo local y ordenar
-    const conDistancia = (GRIFOS_LIMA as Grifo[]).map(g => ({
-      grifo: g,
-      dist: haversine(ubicacion, { latitude: g.latitude, longitude: g.longitude }),
-    }))
-    conDistancia.sort((a, b) => a.dist - b.dist)
-    const resultado = conDistancia.map(x => ({
-      ...x.grifo,
-      distancia: mToKm(Math.round(x.dist)),
-    }))
-    console.log(`[PlacesService] ${resultado.length} grifos locales cargados`)
-    return resultado
+    try {
+      const grifosLocales: Grifo[] = require('../data/grifos-lima.json')
+      const cercanos = grifosLocales
+        .map(g => ({
+          ...g,
+          distancia: formatDistancia(haversineMetros(ubicacion, g)),
+        }))
+        .filter(g => haversineMetros(ubicacion, g) <= radioMetros)
+        .sort((a, b) => haversineMetros(ubicacion, a) - haversineMetros(ubicacion, b))
+
+      if (cercanos.length > 0) return cercanos
+      // Si no hay nada en el radio, retornar todos ordenados por distancia
+      return grifosLocales
+        .map(g => ({
+          ...g,
+          distancia: formatDistancia(haversineMetros(ubicacion, g)),
+        }))
+        .sort((a, b) => haversineMetros(ubicacion, a) - haversineMetros(ubicacion, b))
+    } catch (err) {
+      console.error('[PlacesService] Error leyendo JSON local:', err)
+      return FirestoreService.getGrifos()
+    }
   },
 
   /**
@@ -155,176 +87,174 @@ export const PlacesService = {
         await setDoc(doc(db, 'grifos', id), data, { merge: true })
       }
     } catch (err) {
-      console.error('[PlacesService] Error persistiendo grifos:', err)
+      console.warn('[PlacesService] Error persistiendo en Firestore:', err)
     }
   },
 
   /**
-   * Busca grifos Repsol en la ruta origen → destino (texto).
-   *  1. Geocodifica el destino con Nominatim
-   *  2. Obtiene la ruta con OSRM
-   *  3. Busca grifos Overpass cerca de puntos intermedios de la ruta
+   * Geocodifica un texto de dirección/ciudad a coordenadas usando Geocoding API.
+   */
+  async geocodificar(texto: string, apiKey?: string): Promise<LatLng | null> {
+    const key = apiKey ?? getApiKey()
+    if (!key) return null
+
+    const url =
+      `${GEOCODE_BASE}?address=${encodeURIComponent(texto)}&language=es&key=${key}`
+
+    try {
+      const res = await fetch(url)
+      const data = await res.json()
+      if (data.status === 'OK' && data.results.length > 0) {
+        const loc = data.results[0].geometry.location
+        return { latitude: loc.lat, longitude: loc.lng }
+      }
+      console.warn('[PlacesService] Geocode status:', data.status)
+    } catch (err) {
+      console.error('[PlacesService] geocode error:', err)
+    }
+    return null
+  },
+
+  /**
+   * Busca grifos Repsol a lo largo de una ruta (origen → destino).
+   * Usa Directions API para obtener waypoints de la ruta,
+   * luego filtra el JSON local (grifos-lima.json) por distancia haversine.
+   * No depende de Overpass ni de llamadas por waypoint — sin 502.
    */
   async buscarGrifosEnRuta(
     origen: LatLng,
-    destino: string
+    destino: string,
+    apiKey?: string
   ): Promise<GrifoRuta[]> {
-    const destinoCoords = await PlacesService.geocodificar(destino)
-    if (!destinoCoords) {
-      console.warn('[PlacesService] No se pudo geocodificar:', destino)
-      const grifos = await FirestoreService.getGrifos()
-      return grifos.map(g => ({
-        ...g,
-        distanciaMetros: 0,
-        duracionSegundos: 0,
-        distanciaTexto: 'Sin datos',
-        duracionTexto: 'Sin datos',
-      }))
+    // Cargar datos locales (siempre disponibles, sin red)
+    let grifosLocales: Grifo[] = []
+    try {
+      grifosLocales = require('../data/grifos-lima.json')
+    } catch (err) {
+      console.error('[PlacesService] Error leyendo JSON local:', err)
+      grifosLocales = await FirestoreService.getGrifos()
     }
 
+    const key = apiKey ?? getApiKey()
+
+    // Sin key: retornar todos los grifos locales ordenados por distancia al origen
+    if (!key) {
+      console.warn('[PlacesService] Sin API key — mostrando grifos locales por distancia')
+      return grifosLocales
+        .map(g => ({
+          ...g,
+          distanciaMetros: Math.round(haversineMetros(origen, g)),
+          duracionSegundos: 0,
+          distanciaTexto: formatDistancia(haversineMetros(origen, g)),
+          duracionTexto: 'Ver mapa',
+        }))
+        .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
+    }
+
+    // 1. Geocodificar el destino
+    const destinoCoords = await PlacesService.geocodificar(destino, key)
+    if (!destinoCoords) {
+      console.warn('[PlacesService] No se pudo geocodificar:', destino, '— usando grifos locales')
+      return grifosLocales
+        .map(g => ({
+          ...g,
+          distanciaMetros: Math.round(haversineMetros(origen, g)),
+          duracionSegundos: 0,
+          distanciaTexto: formatDistancia(haversineMetros(origen, g)),
+          duracionTexto: 'Ver mapa',
+        }))
+        .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
+    }
+
+    // 2. Obtener waypoints de la ruta con Directions API
+    const dirUrl =
+      `${DIRECTIONS_BASE}` +
+      `?origin=${origen.latitude},${origen.longitude}` +
+      `&destination=${destinoCoords.latitude},${destinoCoords.longitude}` +
+      `&language=es` +
+      `&key=${key}`
+
     let rutaPuntos: LatLng[] = [origen, destinoCoords]
-    let totalDistMetros = 0
-    let totalDurSecs = 0
+    let legDistanciaTexto = ''
+    let legDuracionTexto = ''
 
     try {
-      const osrmUrl =
-        `https://router.project-osrm.org/route/v1/driving/` +
-        `${origen.longitude},${origen.latitude};` +
-        `${destinoCoords.longitude},${destinoCoords.latitude}` +
-        `?overview=full&geometries=geojson&steps=true`
-
-      const res = await fetch(osrmUrl, { headers: { 'User-Agent': UA } })
+      const res = await fetch(dirUrl)
       const data = await res.json()
+      if (data.status === 'OK' && data.routes.length > 0) {
+        const leg = data.routes[0].legs[0]
+        legDistanciaTexto = leg.distance.text   // ej: "120 km"
+        legDuracionTexto = leg.duration.text    // ej: "1 hora 45 min"
 
-      if (data.code === 'Ok' && data.routes?.length > 0) {
-        const route = data.routes[0]
-        totalDistMetros = Math.round(route.distance)
-        totalDurSecs = Math.round(route.duration)
-
-        const coords: [number, number][] = route.geometry?.coordinates ?? []
+        // Waypoints cada ~30km
+        const steps = leg.steps ?? []
         const puntos: LatLng[] = [origen]
-        let acumMetros = 0
-        for (let i = 1; i < coords.length; i++) {
-          const prev: LatLng = { latitude: coords[i - 1][1], longitude: coords[i - 1][0] }
-          const curr: LatLng = { latitude: coords[i][1], longitude: coords[i][0] }
-          acumMetros += haversine(prev, curr)
-          if (acumMetros >= 20000) {
-            puntos.push(curr)
-            acumMetros = 0
+        let acum = 0
+        for (const step of steps) {
+          acum += step.distance.value
+          if (acum >= 30000) {
+            puntos.push({ latitude: step.end_location.lat, longitude: step.end_location.lng })
+            acum = 0
           }
         }
         puntos.push(destinoCoords)
         rutaPuntos = puntos
+      } else {
+        console.warn('[PlacesService] Directions status:', data.status, '— usando línea recta')
       }
     } catch (err) {
-      console.error('[PlacesService] OSRM error:', err)
+      console.error('[PlacesService] directions error:', err)
     }
 
+    // 3. Filtrar grifos locales dentro de 15km de cualquier waypoint (haversine)
+    const RADIO_RUTA_M = 15000
     const grifoMap = new Map<string, GrifoRuta>()
+    const totalPuntos = rutaPuntos.length - 1 || 1
+    const distanciaTotal = parseFloat(legDistanciaTexto) || 0
 
     for (let i = 0; i < rutaPuntos.length; i++) {
       const punto = rutaPuntos[i]
-      const proporcion = rutaPuntos.length > 1 ? i / (rutaPuntos.length - 1) : 0
-
-      try {
-        const query =
-          `[out:json][timeout:20];` +
-          `(` +
-          `  node["amenity"="fuel"]["name"~"Repsol",i](around:15000,${punto.latitude},${punto.longitude});` +
-          `  way["amenity"="fuel"]["name"~"Repsol",i](around:15000,${punto.latitude},${punto.longitude});` +
-          `  node["amenity"="fuel"]["brand"~"Repsol",i](around:15000,${punto.latitude},${punto.longitude});` +
-          `  way["amenity"="fuel"]["brand"~"Repsol",i](around:15000,${punto.latitude},${punto.longitude});` +
-          `);` +
-          `out center;`
-
-        const res = await fetch('https://overpass-api.de/api/interpreter', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': UA,
-          },
-          body: `data=${encodeURIComponent(query)}`,
+      for (const grifo of grifosLocales) {
+        if (grifoMap.has(grifo.id)) continue
+        const distAlPunto = haversineMetros(punto, {
+          latitude: grifo.latitude,
+          longitude: grifo.longitude,
         })
-
-        if (!res.ok) {
-          console.warn('[PlacesService] Overpass HTTP error en waypoint:', res.status)
-          continue
+        if (distAlPunto <= RADIO_RUTA_M) {
+          const distRutaKm =
+            distanciaTotal > 0
+              ? Math.round((i / totalPuntos) * distanciaTotal)
+              : Math.round(haversineMetros(origen, grifo) / 1000)
+          grifoMap.set(grifo.id, {
+            ...grifo,
+            distanciaMetros: distRutaKm * 1000,
+            duracionSegundos: 0,
+            distanciaTexto: distRutaKm > 0 ? `~${distRutaKm} km` : 'Al inicio',
+            duracionTexto: legDuracionTexto || 'Ver mapa',
+          })
         }
-        const wpText = await res.text()
-        if (!wpText.trim().startsWith('{')) {
-          console.warn('[PlacesService] Overpass no-JSON en waypoint:', wpText.slice(0, 80))
-          continue
-        }
-        const data = JSON.parse(wpText)
-        for (const el of data.elements ?? []) {
-          const base = overpassToGrifo(el)
-          if (!grifoMap.has(base.id)) {
-            const distApprox = Math.round(proporcion * totalDistMetros)
-            grifoMap.set(base.id, {
-              ...base,
-              distanciaMetros: distApprox,
-              duracionSegundos: Math.round(proporcion * totalDurSecs),
-              distanciaTexto: distApprox > 0 ? mToKm(distApprox) : 'En ruta',
-              duracionTexto: totalDurSecs > 0 ? secsToText(Math.round(proporcion * totalDurSecs)) : 'Ver mapa',
-            })
-          }
-        }
-
-        if (i < rutaPuntos.length - 1) {
-          await new Promise(r => setTimeout(r, 1000))
-        }
-      } catch (err) {
-        console.error(`[PlacesService] Overpass error en waypoint ${i}:`, err)
       }
     }
 
-    const resultado = Array.from(grifoMap.values()).sort(
+    let resultado = Array.from(grifoMap.values()).sort(
       (a, b) => a.distanciaMetros - b.distanciaMetros
     )
 
-    if (resultado.length > 0) {
-      await PlacesService.persistirGrifos(resultado)
-    } else {
-      const grifos = await FirestoreService.getGrifos()
-      return grifos.map(g => ({
-        ...g,
-        distanciaMetros: 0,
-        duracionSegundos: 0,
-        distanciaTexto: 'Sin datos',
-        duracionTexto: secsToText(totalDurSecs),
-      }))
+    // Si no hay resultados (destino fuera del rango de los grifos locales),
+    // mostrar todos ordenados por distancia al origen — siempre útil
+    if (resultado.length === 0) {
+      console.warn('[PlacesService] Sin grifos en ruta — mostrando todos los locales')
+      resultado = grifosLocales
+        .map(g => ({
+          ...g,
+          distanciaMetros: Math.round(haversineMetros(origen, g)),
+          duracionSegundos: 0,
+          distanciaTexto: formatDistancia(haversineMetros(origen, g)),
+          duracionTexto: legDuracionTexto || 'Ver mapa',
+        }))
+        .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
     }
 
     return resultado
-  },
-
-  /**
-   * Información de ruta (distancia y duración totales) usando OSRM.
-   */
-  async obtenerInfoRuta(
-    origen: LatLng,
-    destinoCoords: LatLng
-  ): Promise<{ distanciaTexto: string; duracionTexto: string } | null> {
-    try {
-      const url =
-        `https://router.project-osrm.org/route/v1/driving/` +
-        `${origen.longitude},${origen.latitude};` +
-        `${destinoCoords.longitude},${destinoCoords.latitude}` +
-        `?overview=false`
-
-      const res = await fetch(url, { headers: { 'User-Agent': UA } })
-      const data = await res.json()
-
-      if (data.code === 'Ok' && data.routes?.length > 0) {
-        const route = data.routes[0]
-        return {
-          distanciaTexto: mToKm(Math.round(route.distance)),
-          duracionTexto: secsToText(Math.round(route.duration)),
-        }
-      }
-    } catch (err) {
-      console.error('[PlacesService] OSRM info ruta error:', err)
-    }
-    return null
   },
 }
