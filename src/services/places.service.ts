@@ -14,6 +14,7 @@
 
 import { FirestoreService } from './firestore.service'
 import type { Grifo } from '../types'
+import GRIFOS_LIMA from '../data/grifos-lima.json'
 
 // User-Agent requerido por Nominatim (identifica la app)
 const UA = 'RepsolGo/1.0 (proyecto universitario UTP; contacto: repsolgo@utp.edu.pe)'
@@ -121,78 +122,25 @@ export const PlacesService = {
   },
 
   /**
-   * Busca grifos Repsol cerca de una ubicación usando Overpass API (OSM).
+   * Devuelve grifos Repsol ordenados por distancia al usuario.
+   * Usa datos locales (Lima) para carga instantánea — sin esperar APIs externas.
    */
   async buscarGrifosCercanos(
     ubicacion: LatLng,
-    radioMetros = 10000
+    _radioMetros = 10000
   ): Promise<Grifo[]> {
-    try {
-      const query =
-        `[out:json][timeout:25];` +
-        `(` +
-        `  node["amenity"="fuel"]["name"~"Repsol",i](around:${radioMetros},${ubicacion.latitude},${ubicacion.longitude});` +
-        `  way["amenity"="fuel"]["name"~"Repsol",i](around:${radioMetros},${ubicacion.latitude},${ubicacion.longitude});` +
-        `  node["amenity"="fuel"]["brand"~"Repsol",i](around:${radioMetros},${ubicacion.latitude},${ubicacion.longitude});` +
-        `  way["amenity"="fuel"]["brand"~"Repsol",i](around:${radioMetros},${ubicacion.latitude},${ubicacion.longitude});` +
-        `);` +
-        `out center;`
-
-      const OVERPASS = 'https://overpass-api.de/api/interpreter'
-      const res = await fetch(OVERPASS, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': UA,
-        },
-        body: `data=${encodeURIComponent(query)}`,
-      })
-
-      if (!res.ok) {
-        console.warn('[PlacesService] Overpass HTTP error:', res.status, '— usando Firestore')
-        return FirestoreService.getGrifos()
-      }
-      const text = await res.text()
-      if (!text.trim().startsWith('{')) {
-        console.warn('[PlacesService] Overpass respuesta no-JSON:', text.slice(0, 120))
-        return FirestoreService.getGrifos()
-      }
-      const data = JSON.parse(text)
-      const elementos = data.elements ?? []
-
-      if (elementos.length === 0) {
-        console.warn('[PlacesService] Overpass sin resultados — usando Firestore')
-        return FirestoreService.getGrifos()
-      }
-
-      const seen = new Set<string>()
-      const grifos: Grifo[] = []
-
-      for (const el of elementos) {
-        const lat = el.lat ?? el.center?.lat ?? 0
-        const lon = el.lon ?? el.center?.lon ?? 0
-        const key = `${lat.toFixed(5)},${lon.toFixed(5)}`
-        if (seen.has(key)) continue
-        seen.add(key)
-        grifos.push(overpassToGrifo(el))
-      }
-
-      const conDistancia = grifos.map(g => ({
-        grifo: g,
-        dist: haversine(ubicacion, { latitude: g.latitude, longitude: g.longitude }),
-      }))
-      conDistancia.sort((a, b) => a.dist - b.dist)
-      const resultado = conDistancia.map(x => ({
-        ...x.grifo,
-        distancia: mToKm(Math.round(x.dist)),
-      }))
-
-      await PlacesService.persistirGrifos(resultado)
-      return resultado
-    } catch (err) {
-      console.error('[PlacesService] Overpass error:', err)
-      return FirestoreService.getGrifos()
-    }
+    // Calcular distancia a cada grifo local y ordenar
+    const conDistancia = (GRIFOS_LIMA as Grifo[]).map(g => ({
+      grifo: g,
+      dist: haversine(ubicacion, { latitude: g.latitude, longitude: g.longitude }),
+    }))
+    conDistancia.sort((a, b) => a.dist - b.dist)
+    const resultado = conDistancia.map(x => ({
+      ...x.grifo,
+      distancia: mToKm(Math.round(x.dist)),
+    }))
+    console.log(`[PlacesService] ${resultado.length} grifos locales cargados`)
+    return resultado
   },
 
   /**

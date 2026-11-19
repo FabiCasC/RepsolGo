@@ -1,0 +1,377 @@
+[
+  {
+    "id": "repsol-001",
+    "nombre": "Repsol Miraflores - Larco",
+    "direccion": "Av. Larco 1150, Miraflores",
+    "latitude": -12.1192,
+    "longitude": -77.0349,
+    "tiempoEspera": "5 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.8
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.2
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.1
+      }
+    ]
+  },
+  {
+    "id": "repsol-002",
+    "nombre": "Repsol San Isidro - Conquistadores",
+    "direccion": "Av. Los Conquistadores 500, San Isidro",
+    "latitude": -12.0961,
+    "longitude": -77.0381,
+    "tiempoEspera": "3 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.9
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.3
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.2
+      }
+    ]
+  },
+  {
+    "id": "repsol-003",
+    "nombre": "Repsol Surco - Primavera",
+    "direccion": "Av. Primavera 1200, Santiago de Surco",
+    "latitude": -12.1091,
+    "longitude": -76.9881,
+    "tiempoEspera": "8 min",
+    "abierto24h": false,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.75
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.1
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.0
+      }
+    ]
+  },
+  {
+    "id": "repsol-004",
+    "nombre": "Repsol La Molina - Javier Prado",
+    "direccion": "Av. Javier Prado Este 4800, La Molina",
+    "latitude": -12.0831,
+    "longitude": -76.9451,
+    "tiempoEspera": "5 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.85
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.25
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.15
+      }
+    ]
+  },
+  {
+    "id": "repsol-005",
+    "nombre": "Repsol San Borja - Aviación",
+    "direccion": "Av. Aviación 2900, San Borja",
+    "latitude": -12.0981,
+    "longitude": -77.0001,
+    "tiempoEspera": "4 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.8
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.2
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.1
+      }
+    ]
+  },
+  {
+    "id": "repsol-006",
+    "nombre": "Repsol Barranco - Grau",
+    "direccion": "Av. Grau 650, Barranco",
+    "latitude": -12.1431,
+    "longitude": -77.0211,
+    "tiempoEspera": "6 min",
+    "abierto24h": false,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.7
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.05
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 14.95
+      }
+    ]
+  },
+  {
+    "id": "repsol-007",
+    "nombre": "Repsol Lince - Arequipa",
+    "direccion": "Av. Arequipa 2500, Lince",
+    "latitude": -12.0801,
+    "longitude": -77.0381,
+    "tiempoEspera": "7 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.75
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.15
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.05
+      }
+    ]
+  },
+  {
+    "id": "repsol-008",
+    "nombre": "Repsol Jesús María - Brasil",
+    "direccion": "Av. Brasil 1800, Jesús María",
+    "latitude": -12.0721,
+    "longitude": -77.0531,
+    "tiempoEspera": "5 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.8
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.2
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.1
+      }
+    ]
+  },
+  {
+    "id": "repsol-009",
+    "nombre": "Repsol San Miguel - La Marina",
+    "direccion": "Av. La Marina 2100, San Miguel",
+    "latitude": -12.0771,
+    "longitude": -77.0921,
+    "tiempoEspera": "4 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.85
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.25
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.15
+      }
+    ]
+  },
+  {
+    "id": "repsol-010",
+    "nombre": "Repsol Chorrillos - Huaylas",
+    "direccion": "Av. Defensores del Morro 1300, Chorrillos",
+    "latitude": -12.1611,
+    "longitude": -77.0211,
+    "tiempoEspera": "6 min",
+    "abierto24h": false,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.7
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.0
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 14.9
+      }
+    ]
+  },
+  {
+    "id": "repsol-011",
+    "nombre": "Repsol Ate - Javier Prado",
+    "direccion": "Av. Javier Prado Este 3200, Ate",
+    "latitude": -12.0691,
+    "longitude": -76.9821,
+    "tiempoEspera": "8 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.75
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.1
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.0
+      }
+    ]
+  },
+  {
+    "id": "repsol-012",
+    "nombre": "Repsol Los Olivos - Universitaria",
+    "direccion": "Av. Universitaria Norte 1800, Los Olivos",
+    "latitude": -11.9871,
+    "longitude": -77.0631,
+    "tiempoEspera": "5 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.8
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.15
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.05
+      }
+    ]
+  },
+  {
+    "id": "repsol-013",
+    "nombre": "Repsol Callao - Faucett",
+    "direccion": "Av. Elmer Faucett 2800, Callao",
+    "latitude": -12.0291,
+    "longitude": -77.1091,
+    "tiempoEspera": "10 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.65
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.0
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 14.85
+      }
+    ]
+  },
+  {
+    "id": "repsol-014",
+    "nombre": "Repsol Miraflores - Benavides",
+    "direccion": "Av. Benavides 1500, Miraflores",
+    "latitude": -12.1241,
+    "longitude": -77.0051,
+    "tiempoEspera": "5 min",
+    "abierto24h": true,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.9
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.3
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.2
+      }
+    ]
+  },
+  {
+    "id": "repsol-015",
+    "nombre": "Repsol Surquillo - Angamos",
+    "direccion": "Av. Angamos Este 900, Surquillo",
+    "latitude": -12.1121,
+    "longitude": -77.0121,
+    "tiempoEspera": "6 min",
+    "abierto24h": false,
+    "distancia": "",
+    "esFavorito": false,
+    "precios": [
+      {
+        "tipo": "G90",
+        "precio": 15.75
+      },
+      {
+        "tipo": "G95",
+        "precio": 17.15
+      },
+      {
+        "tipo": "Diesel B5",
+        "precio": 15.05
+      }
+    ]
+  }
+]
