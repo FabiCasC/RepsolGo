@@ -36,7 +36,10 @@
         "WRITE_EXTERNAL_STORAGE",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
-      ]
+      ],
+      "googleMaps": {
+        "apiKey": "AIzaSyBspcTEh828O90o862FewdtQeCek9MIXOk"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -62,7 +65,7 @@
       [
         "react-native-maps",
         {
-          "enableGoogleMaps": false
+          "enableGoogleMaps": true
         }
       ]
     ],

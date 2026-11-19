@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native'
-import MapView, { Region, UrlTile, PROVIDER_DEFAULT } from 'react-native-maps'
+import MapView, { Region, UrlTile, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps'
 import Svg, { Path, Circle } from 'react-native-svg'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Location from 'expo-location'
@@ -150,7 +150,7 @@ export default function MapaScreen() {
         <MapView
           ref={mapRef}
           style={{ flex: 1 }}
-          provider={PROVIDER_DEFAULT}
+          provider={PROVIDER_GOOGLE}
           initialRegion={Config.LIMA_CENTER as Region}
           showsUserLocation={locationReady}
           showsMyLocationButton={false}
@@ -158,14 +158,7 @@ export default function MapaScreen() {
           showsScale={false}
         >
           {/* Tiles de OpenStreetMap — gratis, sin API key */}
-          <UrlTile
-            urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maximumZ={19}
-            minimumZ={0}
-            flipY={false}
-            tileSize={256}
-            offlineMode={false}
-          />
+          {/* Google Maps — tiles nativos, no necesita UrlTile */}
 
           {filteredGrifos.map(grifo => (
             <GrifoMarker
