@@ -137,12 +137,6 @@ export default function AppLayout() {
         <Tabs.Screen name="ayuda" options={{ href: null }} />
         <Tabs.Screen name="terminos" options={{ href: null }} />
         <Tabs.Screen name="privacidad" options={{ href: null }} />
-        <Tabs.Screen name="perfil/editar" options={{ href: null }} />
-        <Tabs.Screen name="perfil/cambiar-password" options={{ href: null }} />
-        <Tabs.Screen name="perfil/historial" options={{ href: null }} />
-        <Tabs.Screen name="perfil/mis-cargas" options={{ href: null }} />
-        <Tabs.Screen name="perfil/mis-favoritos" options={{ href: null }} />
-        <Tabs.Screen name="perfil/cuenta-grupal" options={{ href: null }} />
       </Tabs>
     </AuthGuard>
   )
