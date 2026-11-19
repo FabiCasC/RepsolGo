@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import {
   View,
   Text,
@@ -6,11 +6,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native'
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../src/constants/colors'
 import { Button } from '../../src/components/ui/Button'
+import { useAuthStore } from '../../src/store/auth.store'
+import { FirestoreService } from '../../src/services/firestore.service'
+import { NotificationsService } from '../../src/services/notifications.service'
 
 type EscanearState = 'camera' | 'processing' | 'result'
 
@@ -25,7 +29,7 @@ interface BoletaData {
 
 const MOCK_BOLETA: BoletaData = {
   grifo: 'Repsol Javier Prado Este',
-  fecha: '14/10/2026',
+  fecha: new Date().toLocaleDateString('es-PE'),
   litros: '22L',
   monto: 'S/349.80',
   combustible: '95 oct',
@@ -36,12 +40,17 @@ export default function EscanearScreen() {
   const [permission, requestPermission] = useCameraPermissions()
   const [state, setState] = useState<EscanearState>('camera')
   const [boletaData, setBoletaData] = useState<BoletaData | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const user = useAuthStore(s => s.user)
+  const { updateUser } = useAuthStore()
 
   if (!permission) {
     return <View style={styles.loadingContainer} />
   }
 
   if (!permission.granted) {
+    const canAskAgain = permission.canAskAgain
+
     return (
       <SafeAreaView style={styles.permissionContainer}>
         <View style={styles.permissionContent}>
@@ -50,12 +59,26 @@ export default function EscanearScreen() {
           <Text style={styles.permissionDesc}>
             Para escanear tus boletas y acreditar los puntos automáticamente.
           </Text>
-          <Button
-            label="Conceder permiso"
-            onPress={requestPermission}
-            fullWidth
-            style={styles.permissionBtn}
-          />
+          {canAskAgain ? (
+            <Button
+              label="Conceder permiso"
+              onPress={requestPermission}
+              fullWidth
+              style={styles.permissionBtn}
+            />
+          ) : (
+            <>
+              <Text style={styles.deniedText}>
+                El permiso fue denegado. Habilítalo desde Configuración.
+              </Text>
+              <Button
+                label="Abrir Configuración"
+                onPress={() => Linking.openSettings()}
+                fullWidth
+                style={styles.permissionBtn}
+              />
+            </>
+          )}
         </View>
       </SafeAreaView>
     )
@@ -74,12 +97,50 @@ export default function EscanearScreen() {
     setState('camera')
   }
 
-  function handleConfirm() {
-    Alert.alert(
-      '¡Puntos acreditados!',
-      `+${MOCK_BOLETA.puntos} puntos han sido añadidos a tu cuenta.`,
-      [{ text: 'Genial', onPress: handleReset }]
-    )
+  async function handleConfirm() {
+    if (!user || !boletaData) return
+    setConfirming(true)
+    try {
+      await FirestoreService.addCarga(user.id, {
+        grifoNombre: boletaData.grifo,
+        fecha: boletaData.fecha,
+        litros: boletaData.litros,
+        monto: boletaData.monto,
+        combustible: boletaData.combustible,
+        puntos: boletaData.puntos,
+      })
+
+      // Update reto Cargador Constante
+      const retos = await FirestoreService.getRetos(user.id)
+      const retoCargador = retos.find(r => r.titulo === 'Cargador Constante')
+      if (retoCargador) {
+        const cargas = await FirestoreService.getCargas(user.id)
+        await FirestoreService.updateRetoProgreso(user.id, retoCargador.firestoreId, cargas.length)
+      }
+
+      // Update user points locally
+      const newPuntos = (user.puntos ?? 0) + boletaData.puntos
+      await updateUser({ puntos: newPuntos })
+
+      // Check nivel
+      await FirestoreService.actualizarNivel(user.id, newPuntos)
+
+      // Local notification
+      await NotificationsService.scheduleLocalNotification(
+        '¡Puntos acreditados!',
+        `+${boletaData.puntos} puntos añadidos a tu cuenta RepsolGo`
+      )
+
+      Alert.alert(
+        '¡Puntos acreditados!',
+        `+${boletaData.puntos} puntos han sido añadidos a tu cuenta.`,
+        [{ text: 'Genial', onPress: handleReset }]
+      )
+    } catch (err) {
+      Alert.alert('Error', 'No se pudo acreditar los puntos. Intenta de nuevo.')
+    } finally {
+      setConfirming(false)
+    }
   }
 
   if (state === 'camera') {
@@ -169,7 +230,7 @@ export default function EscanearScreen() {
 
         <View style={styles.resultActions}>
           <Button
-            label="Confirmar y canjear puntos"
+            label={confirming ? 'Acreditando...' : 'Confirmar y canjear puntos'}
             onPress={handleConfirm}
             fullWidth
             style={styles.confirmBtn}
@@ -221,6 +282,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
+  },
+  deniedText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 20,
   },
   permissionBtn: {},
   cameraContainer: {

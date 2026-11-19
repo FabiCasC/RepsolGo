@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  Linking,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -27,19 +28,29 @@ export default function EditarPerfilScreen() {
   const initials = nombre.split(' ').map(n => n[0]).slice(0, 2).join('')
 
   async function handlePickImage() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') {
+    const { status, canAskAgain } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+
+    if (status === 'granted') {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      })
+      if (!result.canceled && result.assets[0]) {
+        setAvatar(result.assets[0].uri)
+      }
+    } else if (!canAskAgain) {
+      Alert.alert(
+        'Permiso requerido',
+        'El acceso a la galería fue denegado permanentemente. Habilítalo desde Configuración.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Configuración', onPress: () => Linking.openSettings() },
+        ]
+      )
+    } else {
       Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería de fotos.')
-      return
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    })
-    if (!result.canceled && result.assets[0]) {
-      setAvatar(result.assets[0].uri)
     }
   }
 
@@ -49,12 +60,16 @@ export default function EditarPerfilScreen() {
       return
     }
     setSaving(true)
-    await new Promise(resolve => setTimeout(resolve, 600))
-    updateUser({ nombre: nombre.trim(), telefono, avatar: avatar ?? undefined })
-    setSaving(false)
-    Alert.alert('¡Guardado!', 'Tu perfil fue actualizado correctamente.', [
-      { text: 'OK', onPress: () => router.back() },
-    ])
+    try {
+      await updateUser({ nombre: nombre.trim(), telefono, avatar: avatar ?? undefined })
+      Alert.alert('¡Guardado!', 'Tu perfil fue actualizado correctamente.', [
+        { text: 'OK', onPress: () => router.back() },
+      ])
+    } catch (err) {
+      Alert.alert('Error', 'No se pudo guardar el perfil. Intenta de nuevo.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

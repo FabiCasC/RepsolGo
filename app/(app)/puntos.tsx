@@ -1,10 +1,12 @@
-import React from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Alert,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../src/constants/colors'
@@ -12,34 +14,104 @@ import { PuntosHeroCard } from '../../src/components/puntos/PuntosHeroCard'
 import { CanjeCard } from '../../src/components/puntos/CanjeCard'
 import { CargaItem } from '../../src/components/puntos/CargaItem'
 import { useAuthStore } from '../../src/store/auth.store'
+import { FirestoreService } from '../../src/services/firestore.service'
+import { NotificationsService } from '../../src/services/notifications.service'
 import type { Canje, Punto } from '../../src/types'
 
-const CANJES: Canje[] = [
-  { id: '1', nombre: 'Descuento S/5', descripcion: 'En tu próxima carga', puntos: 500, icono: 'fuel', categoria: 'combustible' },
-  { id: '2', nombre: 'Tienda Repsol', descripcion: 'Vale S/20 en tienda', puntos: 1000, icono: 'store', categoria: 'tienda' },
-  { id: '3', nombre: 'Car wash', descripcion: 'Lavado básico gratis', puntos: 800, icono: 'car', categoria: 'descuento' },
-  { id: '4', nombre: 'Gift card S/50', descripcion: 'Canjeable en Ripley', puntos: 2500, icono: 'gift', categoria: 'voucher' },
-]
-
-const HISTORIAL: Punto[] = [
-  { id: '1', fecha: '14/10/2026', descripcion: 'Carga de combustible', cantidad: 90, tipo: 'carga', grifoNombre: 'Repsol Javier Prado Este' },
-  { id: '2', fecha: '12/10/2026', descripcion: 'Carga de combustible', cantidad: 88, tipo: 'carga', grifoNombre: 'Repsol Benavides' },
-  { id: '3', fecha: '10/10/2026', descripcion: 'Boleta escaneada', cantidad: 120, tipo: 'escaneo', grifoNombre: 'Repsol La Marina', badge: 'Retroactivo' },
-]
+interface Balance {
+  total: number
+  nivel: string
+  cargas: number
+  retosCompletados: number
+  esteMes: number
+  puntosParaSiguienteNivel: number
+  progresoNivel: number
+}
 
 export default function PuntosScreen() {
   const user = useAuthStore(state => state.user)
+  const { updateUser } = useAuthStore()
+  const [canjes, setCanjes] = useState<Canje[]>([])
+  const [historial, setHistorial] = useState<Punto[]>([])
+  const [balance, setBalance] = useState<Balance | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
-  function handleCanje(canje: Canje) {
+  const loadData = useCallback(async () => {
+    if (!user?.id) return
+    try {
+      const [canjesData, cargasData, balanceData] = await Promise.all([
+        FirestoreService.getCanjesDisponibles(),
+        FirestoreService.getCargas(user.id),
+        FirestoreService.getBalance(user.id),
+      ])
+      setCanjes(canjesData as Canje[])
+      setHistorial(
+        cargasData.slice(0, 5).map(c => ({
+          id: c.id,
+          fecha: c.fecha,
+          descripcion: 'Carga de combustible',
+          cantidad: c.puntos,
+          tipo: 'carga' as const,
+          grifoNombre: c.grifoNombre,
+        }))
+      )
+      setBalance(balanceData)
+    } catch (err) {
+      // silent fail — keep showing what we have
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  async function handleCanje(canje: Canje) {
+    if (!user?.id) return
+    const currentPuntos = balance?.total ?? user.puntos ?? 0
+    if (currentPuntos < canje.puntos) {
+      Alert.alert('Puntos insuficientes', `Necesitas ${canje.puntos} puntos para este canje.`)
+      return
+    }
     Alert.alert(
       'Confirmar canje',
       `¿Deseas canjear ${canje.puntos} puntos por "${canje.nombre}"?`,
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Canjear', onPress: () => Alert.alert('¡Canje exitoso!', 'Tus puntos fueron canjeados.') },
+        {
+          text: 'Canjear',
+          onPress: async () => {
+            try {
+              await FirestoreService.canjearPuntos(user.id, {
+                nombre: canje.nombre,
+                puntos: canje.puntos,
+                canjeId: canje.id,
+              })
+              const newPuntos = currentPuntos - canje.puntos
+              await updateUser({ puntos: newPuntos })
+
+              await NotificationsService.scheduleLocalNotification(
+                '¡Canje exitoso!',
+                `Canjeaste "${canje.nombre}" por ${canje.puntos} puntos`
+              )
+
+              Alert.alert('¡Canje exitoso!', `"${canje.nombre}" fue canjeado.`)
+              loadData()
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? err.message : 'Error al canjear.'
+              Alert.alert('Error', msg)
+            }
+          },
+        },
       ]
     )
   }
+
+  const displayBalance = balance?.total ?? user?.puntos ?? 0
+  const displayNivel = balance?.nivel ?? user?.nivel ?? 'Bronce'
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -55,39 +127,55 @@ export default function PuntosScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
-        <PuntosHeroCard
-          puntos={user?.puntos ?? 4820}
-          nivel={user?.nivel ?? 'Oro'}
-          progresoNivel={0.32}
-          esteMes={320}
-          cargas={8}
-          retosCompletados={2}
-        />
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Canjear puntos</Text>
-          <View style={styles.canjesGrid}>
-            {CANJES.map((c, i) => (
-              <View key={c.id} style={[styles.canjeWrapper, i % 2 === 0 && styles.canjeLeft]}>
-                <CanjeCard canje={c} onPress={handleCanje} />
-              </View>
-            ))}
-          </View>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.orange} />
         </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={styles.scroll}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData() }} tintColor={Colors.orange} />
+          }
+        >
+          <PuntosHeroCard
+            puntos={displayBalance}
+            nivel={displayNivel}
+            progresoNivel={balance?.progresoNivel ?? 0}
+            esteMes={balance?.esteMes ?? 0}
+            cargas={balance?.cargas ?? 0}
+            retosCompletados={balance?.retosCompletados ?? 0}
+          />
 
-        <View style={[styles.section, styles.sectionLast]}>
-          <Text style={styles.sectionTitle}>Últimas cargas</Text>
-          <View style={styles.historialCard}>
-            {HISTORIAL.map(punto => (
-              <CargaItem key={punto.id} punto={punto} />
-            ))}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Canjear puntos</Text>
+            <View style={styles.canjesGrid}>
+              {canjes.map((c, i) => (
+                <View key={c.id} style={[styles.canjeWrapper, i % 2 === 0 && styles.canjeLeft]}>
+                  <CanjeCard canje={c} onPress={handleCanje} />
+                </View>
+              ))}
+            </View>
           </View>
-          <View style={styles.verMasBtn}>
-            <Text style={styles.verMasText}>Ver historial completo →</Text>
+
+          <View style={[styles.section, styles.sectionLast]}>
+            <Text style={styles.sectionTitle}>Últimas cargas</Text>
+            <View style={styles.historialCard}>
+              {historial.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>Aún no tienes cargas registradas.</Text>
+                  <Text style={styles.emptyHint}>¡Escanea tu primera boleta!</Text>
+                </View>
+              ) : (
+                historial.map(punto => (
+                  <CargaItem key={punto.id} punto={punto} />
+                ))
+              )}
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   )
 }
@@ -128,6 +216,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scroll: {
     flex: 1,
     marginTop: -12,
@@ -163,12 +256,17 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.border,
   },
-  verMasBtn: {
-    marginTop: 12,
+  emptyState: {
+    paddingVertical: 24,
     alignItems: 'center',
   },
-  verMasText: {
+  emptyText: {
     fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  emptyHint: {
+    fontSize: 13,
     color: Colors.orange,
     fontWeight: '600',
   },

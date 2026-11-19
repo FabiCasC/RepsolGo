@@ -52,6 +52,7 @@ export interface Canje {
 
 export interface Reto {
   id: string
+  firestoreId?: string
   titulo: string
   descripcion: string
   progreso: number

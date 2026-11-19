@@ -77,8 +77,15 @@ export default function LoginScreen() {
     try {
       await login(email, password)
       router.replace('/(app)/mapa')
-    } catch {
-      Alert.alert('Error', 'Credenciales incorrectas. Intenta de nuevo.')
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code
+      let msg = 'Error al iniciar sesión. Intenta de nuevo.'
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        msg = 'Email o contraseña incorrectos.'
+      } else if (code === 'auth/too-many-requests') {
+        msg = 'Demasiados intentos. Espera un momento.'
+      }
+      Alert.alert('Error', msg)
     }
   }
 

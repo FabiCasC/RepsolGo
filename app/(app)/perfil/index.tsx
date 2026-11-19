@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../../src/constants/colors'
 import { useAuthStore } from '../../../src/store/auth.store'
+import { FirestoreService } from '../../../src/services/firestore.service'
+import { NotificationsService } from '../../../src/services/notifications.service'
 
 interface MenuItemProps {
   label: string
@@ -45,9 +47,37 @@ function MenuItem({ label, icon, onPress, rightElement, danger }: MenuItemProps)
 export default function PerfilScreen() {
   const router = useRouter()
   const { user, logout } = useAuthStore()
-  const [notifPush, setNotifPush] = useState(true)
+  const [notifPush, setNotifPush] = useState(false)
   const [notifEmail, setNotifEmail] = useState(false)
   const [biometric, setBiometric] = useState(false)
+  const [cargas, setCargas] = useState(0)
+  const [retosCompletados, setRetosCompletados] = useState(0)
+
+  const loadStats = useCallback(async () => {
+    if (!user?.id) return
+    try {
+      const balance = await FirestoreService.getBalance(user.id)
+      setCargas(balance.cargas)
+      setRetosCompletados(balance.retosCompletados)
+    } catch {}
+  }, [user?.id])
+
+  useEffect(() => {
+    loadStats()
+    NotificationsService.getStoredPreference().then(setNotifPush)
+  }, [loadStats])
+
+  async function handleToggleNotif(val: boolean) {
+    if (val) {
+      const granted = await NotificationsService.requestPermissions()
+      if (!granted) {
+        Alert.alert('Permiso requerido', 'Habilita las notificaciones desde Configuración.')
+        return
+      }
+    }
+    setNotifPush(val)
+    await NotificationsService.setStoredPreference(val)
+  }
 
   function handleLogout() {
     Alert.alert(
@@ -93,12 +123,12 @@ export default function PerfilScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
-            <Text style={styles.statValue}>8</Text>
+            <Text style={styles.statValue}>{cargas}</Text>
             <Text style={styles.statLabel}>Cargas</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
-            <Text style={styles.statValue}>2</Text>
+            <Text style={styles.statValue}>{retosCompletados}</Text>
             <Text style={styles.statLabel}>Retos</Text>
           </View>
         </View>
@@ -111,8 +141,8 @@ export default function PerfilScreen() {
               label="Editar perfil"
               onPress={() => router.push('/(app)/perfil/editar')}
             />
-            <MenuItem icon="⛽" label="Mis cargas" onPress={() => {}} />
-            <MenuItem icon="⭐" label="Mis favoritos" onPress={() => {}} />
+            <MenuItem icon="⛽" label="Mis cargas" onPress={() => router.push('/(app)/perfil/mis-cargas')} />
+            <MenuItem icon="⭐" label="Mis favoritos" onPress={() => router.push('/(app)/perfil/mis-favoritos')} />
           </View>
         </View>
 
@@ -144,7 +174,7 @@ export default function PerfilScreen() {
               rightElement={
                 <Switch
                   value={notifPush}
-                  onValueChange={setNotifPush}
+                  onValueChange={handleToggleNotif}
                   trackColor={{ false: Colors.border, true: Colors.orange }}
                   thumbColor={Colors.white}
                 />

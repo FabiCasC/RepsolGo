@@ -1,8 +1,7 @@
 import type { Grifo } from '../types'
+import { FirestoreService } from './firestore.service'
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-
-const GRIFOS_MOCK: Grifo[] = [
+const GRIFOS_BASE: Grifo[] = [
   {
     id: '1',
     nombre: 'Repsol Javier Prado Este',
@@ -17,7 +16,7 @@ const GRIFOS_MOCK: Grifo[] = [
     tiempoEspera: '~5 min',
     abierto24h: true,
     distancia: '2.3 km',
-    esFavorito: true,
+    esFavorito: false,
   },
   {
     id: '2',
@@ -86,20 +85,48 @@ const GRIFOS_MOCK: Grifo[] = [
 ]
 
 export const GrifosService = {
-  async getGrifos(): Promise<Grifo[]> {
-    await delay(400)
-    return GRIFOS_MOCK
+  async getGrifos(uid?: string): Promise<Grifo[]> {
+    if (!uid) return GRIFOS_BASE
+    const favoritos = await FirestoreService.getFavoritos(uid)
+    const favIds = new Set(favoritos.map(f => f.grifoId))
+    return GRIFOS_BASE.map(g => ({ ...g, esFavorito: favIds.has(g.id) }))
   },
 
   async getGrifoById(id: string): Promise<Grifo | undefined> {
-    await delay(200)
-    return GRIFOS_MOCK.find(g => g.id === id)
+    return GRIFOS_BASE.find(g => g.id === id)
   },
 
-  async toggleFavorito(id: string): Promise<Grifo[]> {
-    await delay(200)
-    return GRIFOS_MOCK.map(g =>
-      g.id === id ? { ...g, esFavorito: !g.esFavorito } : g
-    )
+  async toggleFavorito(uid: string, grifo: Grifo): Promise<boolean> {
+    return FirestoreService.toggleFavorito(uid, grifo.id, {
+      grifoId: grifo.id,
+      nombre: grifo.nombre,
+      direccion: grifo.direccion,
+      latitude: grifo.latitude,
+      longitude: grifo.longitude,
+    })
+  },
+
+  async getFavoritos(uid: string): Promise<Grifo[]> {
+    const favoritos = await FirestoreService.getFavoritos(uid)
+    return favoritos.map(f => {
+      const base = GRIFOS_BASE.find(g => g.id === f.grifoId)
+      if (base) return { ...base, esFavorito: true }
+      return {
+        id: f.grifoId,
+        nombre: f.nombre,
+        direccion: f.direccion,
+        latitude: f.latitude,
+        longitude: f.longitude,
+        precios: [],
+        tiempoEspera: '',
+        abierto24h: false,
+        distancia: '',
+        esFavorito: true,
+      }
+    })
+  },
+
+  getGrifosBase(): Grifo[] {
+    return GRIFOS_BASE
   },
 }

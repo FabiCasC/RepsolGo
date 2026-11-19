@@ -1,73 +1,140 @@
-import React from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../src/constants/colors'
 import { RetoCard } from '../../src/components/gamificacion/RetoCard'
 import { BadgeGrid } from '../../src/components/gamificacion/BadgeGrid'
+import { useAuthStore } from '../../src/store/auth.store'
+import { FirestoreService } from '../../src/services/firestore.service'
+import { NotificationsService } from '../../src/services/notifications.service'
 import type { Reto, Badge } from '../../src/types'
 
-const RETOS_ACTIVOS: Reto[] = [
-  {
-    id: '1',
-    titulo: 'Cargador Constante',
-    descripcion: 'Realiza 5 cargas este mes en cualquier grifo Repsol',
-    progreso: 3,
-    meta: 5,
-    puntos: 300,
-    xp: 100,
-    fechaVencimiento: '31 oct',
-    completado: false,
-    icono: '⚡',
-    color: Colors.orange,
-  },
-  {
-    id: '2',
-    titulo: 'Madrugador',
-    descripcion: 'Carga entre 6 AM y 9 AM durante 3 días',
-    progreso: 1,
-    meta: 3,
-    puntos: 200,
-    xp: 75,
-    fechaVencimiento: '20 oct',
-    completado: false,
-    icono: '🌅',
-    color: '#F59E0B',
-  },
-  {
-    id: '3',
-    titulo: 'Explorador',
-    descripcion: 'Visita 5 grifos Repsol distintos',
-    progreso: 4,
-    meta: 5,
-    puntos: 250,
-    xp: 80,
-    fechaVencimiento: '31 oct',
-    completado: false,
-    icono: '🗺️',
-    color: '#3B82F6',
-  },
-]
-
-const BADGES: Badge[] = [
-  { id: '1', nombre: 'Pionero', descripcion: 'Primera carga', icono: '🚀', ganado: true, color: '#F59E0B' },
-  { id: '2', nombre: 'Fiel', descripcion: '10 cargas', icono: '❤️', ganado: true, color: Colors.red },
-  { id: '3', nombre: 'Explorador', descripcion: '5 grifos', icono: '🗺️', ganado: true, color: '#3B82F6' },
-  { id: '4', nombre: 'Madrugador', descripcion: 'Carga temprana', icono: '🌅', ganado: false, color: '#F59E0B' },
-  { id: '5', nombre: 'Platinum', descripcion: 'Nivel Platino', icono: '💎', ganado: false },
-  { id: '6', nombre: 'Reto Rey', descripcion: '10 retos', icono: '👑', ganado: false },
-  { id: '7', nombre: 'Ahorrón', descripcion: '5 canjes', icono: '💰', ganado: false },
-  { id: '8', nombre: 'Estrella', descripcion: 'Un año activo', icono: '⭐', ganado: false },
-]
-
 export default function RetosScreen() {
+  const user = useAuthStore(s => s.user)
+  const [retos, setRetos] = useState<Reto[]>([])
+  const [badges, setBadges] = useState<Badge[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [xp, setXp] = useState(0)
+  const [nivel, setNivel] = useState(1)
+
+  const loadData = useCallback(async () => {
+    if (!user?.id) return
+    try {
+      await FirestoreService.seedRetosIniciales(user.id)
+      const [retosData, cargasData] = await Promise.all([
+        FirestoreService.getRetos(user.id),
+        FirestoreService.getCargas(user.id),
+      ])
+
+      const cargasCount = cargasData.length
+
+      // Update Cargador Constante progress dynamically
+      const retosActualizados = retosData.map(r => {
+        if (r.titulo === 'Cargador Constante') {
+          return { ...r, progreso: Math.min(cargasCount, r.meta) }
+        }
+        return r
+      })
+
+      setRetos(retosActualizados)
+
+      // Notify completed retos
+      for (const r of retosActualizados) {
+        if (r.progreso >= r.meta && !r.completado) {
+          await FirestoreService.updateRetoProgreso(user.id, r.firestoreId ?? r.id, r.progreso)
+          await NotificationsService.scheduleLocalNotification(
+            '¡Reto completado!',
+            `Completaste "${r.titulo}" y ganaste ${r.puntos} puntos`
+          )
+        }
+      }
+
+      // Calculate XP and level
+      const totalXp = retosActualizados
+        .filter(r => r.progreso >= r.meta)
+        .reduce((acc, r) => acc + r.xp, 0)
+      setXp(totalXp)
+      setNivel(Math.floor(totalXp / 100) + 1)
+
+      // Calculate badges
+      const updatedBadges: Badge[] = [
+        {
+          id: '1',
+          nombre: 'Pionero',
+          descripcion: 'Primera carga',
+          icono: '🚀',
+          ganado: cargasCount >= 1,
+          color: '#F59E0B',
+        },
+        {
+          id: '2',
+          nombre: 'Fiel',
+          descripcion: '10 cargas',
+          icono: '❤️',
+          ganado: cargasCount >= 10,
+          color: Colors.red,
+        },
+        {
+          id: '3',
+          nombre: 'Explorador',
+          descripcion: '5 grifos',
+          icono: '🗺️',
+          ganado: retosActualizados.find(r => r.titulo === 'Explorador')?.completado ?? false,
+          color: '#3B82F6',
+        },
+        {
+          id: '4',
+          nombre: 'Madrugador',
+          descripcion: 'Carga temprana',
+          icono: '🌅',
+          ganado: retosActualizados.find(r => r.titulo === 'Madrugador')?.completado ?? false,
+          color: '#F59E0B',
+        },
+        { id: '5', nombre: 'Platinum', descripcion: 'Nivel Platino', icono: '💎', ganado: (user.puntos ?? 0) >= 5000 },
+        { id: '6', nombre: 'Reto Rey', descripcion: '10 retos', icono: '👑', ganado: false },
+        { id: '7', nombre: 'Ahorrón', descripcion: '5 canjes', icono: '💰', ganado: false },
+        { id: '8', nombre: 'Estrella', descripcion: 'Un año activo', icono: '⭐', ganado: false },
+      ]
+      setBadges(updatedBadges)
+    } catch (err) {
+      // silent
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const xpParaSiguiente = nivel * 100
+  const progresoXp = xpParaSiguiente > 0 ? Math.min(xp / xpParaSiguiente, 1) : 0
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.orange} />
+      </View>
+    )
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData() }} tintColor={Colors.orange} />
+        }
+      >
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
@@ -77,33 +144,37 @@ export default function RetosScreen() {
             <View style={styles.rachaContainer}>
               <View style={styles.rachaBadge}>
                 <Text style={styles.rachaEmoji}>🔥</Text>
-                <Text style={styles.rachaText}>7 días</Text>
+                <Text style={styles.rachaText}>{retos.filter(r => r.completado).length} completos</Text>
               </View>
-              <Text style={styles.rachaLabel}>Racha</Text>
+              <Text style={styles.rachaLabel}>Retos</Text>
             </View>
           </View>
 
           <View style={styles.xpSection}>
             <View style={styles.xpHeader}>
-              <Text style={styles.xpNivel}>Nivel 12 — Explorador</Text>
-              <Text style={styles.xpPct}>62%</Text>
+              <Text style={styles.xpNivel}>Nivel {nivel} — {user?.nivel ?? 'Bronce'}</Text>
+              <Text style={styles.xpPct}>{Math.round(progresoXp * 100)}%</Text>
             </View>
             <View style={styles.xpTrack}>
-              <View style={[styles.xpFill, { width: '62%' }]} />
+              <View style={[styles.xpFill, { width: `${progresoXp * 100}%` }]} />
             </View>
-            <Text style={styles.xpHint}>1,860 / 3,000 XP para Nivel 13</Text>
+            <Text style={styles.xpHint}>{xp} / {xpParaSiguiente} XP para Nivel {nivel + 1}</Text>
           </View>
         </View>
 
         <View style={styles.content}>
           <Text style={styles.sectionTitle}>Retos activos</Text>
-          {RETOS_ACTIVOS.map(reto => (
-            <RetoCard key={reto.id} reto={reto} />
-          ))}
+          {retos.length === 0 ? (
+            <Text style={styles.emptyText}>No hay retos activos.</Text>
+          ) : (
+            retos.map(reto => (
+              <RetoCard key={reto.id} reto={reto} />
+            ))
+          )}
 
           <Text style={styles.sectionTitle}>Badges coleccionables</Text>
           <View style={styles.badgesContainer}>
-            <BadgeGrid badges={BADGES} />
+            <BadgeGrid badges={badges} />
           </View>
 
           <View style={styles.carbonCard}>
@@ -133,6 +204,12 @@ export default function RetosScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: Colors.surface,
@@ -230,6 +307,11 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     marginTop: 8,
   },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 16,
+  },
   badgesContainer: {
     backgroundColor: Colors.white,
     borderRadius: 16,
@@ -239,7 +321,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   carbonCard: {
-    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1.5,

@@ -19,14 +19,13 @@ import type { UserRole } from '../../src/types'
 
 export default function RegisterScreen() {
   const router = useRouter()
-  const login = useAuthStore(state => state.login)
+  const { register, isLoading } = useAuthStore()
 
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [rol, setRol] = useState<UserRole>('cliente')
-  const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   function validate() {
@@ -43,14 +42,12 @@ export default function RegisterScreen() {
 
   async function handleRegister() {
     if (!validate()) return
-    setLoading(true)
     try {
-      await login(email, password)
+      await register(nombre.trim(), email, password)
       router.replace('/(app)/mapa')
-    } catch {
-      Alert.alert('Error', 'No se pudo crear la cuenta. Intenta de nuevo.')
-    } finally {
-      setLoading(false)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No se pudo crear la cuenta.'
+      Alert.alert('Error', msg)
     }
   }
 
@@ -137,7 +134,7 @@ export default function RegisterScreen() {
             <Button
               label="Crear cuenta"
               onPress={handleRegister}
-              loading={loading}
+              loading={isLoading}
               fullWidth
               style={styles.registerBtn}
             />

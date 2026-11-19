@@ -35,9 +35,13 @@ export default function ForgotPasswordScreen() {
     try {
       await AuthService.sendPasswordReset(email)
       setSent(true)
-      setTimeout(() => {
-        router.push('/(auth)/reset-password')
-      }, 1200)
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code
+      if (code === 'auth/user-not-found') {
+        setError('No existe una cuenta con ese email.')
+      } else {
+        setError('Error al enviar. Verifica tu email.')
+      }
     } finally {
       setLoading(false)
     }
@@ -67,7 +71,7 @@ export default function ForgotPasswordScreen() {
             <View style={styles.successCard}>
               <Text style={styles.successIcon}>✅</Text>
               <Text style={styles.successText}>
-                Código enviado a {email}. Redirigiendo...
+                Enlace enviado a {email}. Revisa tu bandeja de entrada.
               </Text>
             </View>
           ) : (

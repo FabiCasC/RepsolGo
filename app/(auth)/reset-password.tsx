@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors } from '../../src/constants/colors'
 import { Button } from '../../src/components/ui/Button'
 import { Input } from '../../src/components/ui/Input'
-import { AuthService } from '../../src/services/auth.service'
 
 export default function ResetPasswordScreen() {
   const router = useRouter()
@@ -56,17 +55,13 @@ export default function ResetPasswordScreen() {
 
   async function handleReset() {
     if (!validate()) return
-    setLoading(true)
-    try {
-      await AuthService.resetPassword(otp.join(''), newPassword)
-      Alert.alert('¡Listo!', 'Tu contraseña fue restablecida correctamente.', [
-        { text: 'Iniciar sesión', onPress: () => router.replace('/(auth)/login') },
-      ])
-    } catch {
-      Alert.alert('Error', 'No se pudo restablecer la contraseña. Intenta de nuevo.')
-    } finally {
-      setLoading(false)
-    }
+    // Firebase handles password reset via email link.
+    // This screen is kept for UX flow. Direct user to login.
+    Alert.alert(
+      'Restablecimiento enviado',
+      'Por seguridad, Firebase envía un enlace a tu email para cambiar la contraseña. Revisa tu correo.',
+      [{ text: 'Ir al login', onPress: () => router.replace('/(auth)/login') }]
+    )
   }
 
   return (
