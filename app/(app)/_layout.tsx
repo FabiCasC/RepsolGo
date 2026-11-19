@@ -134,6 +134,9 @@ export default function AppLayout() {
         <Tabs.Screen name="huella" options={{ href: null }} />
         <Tabs.Screen name="factura" options={{ href: null }} />
         <Tabs.Screen name="ocr-boleta" options={{ href: null }} />
+        <Tabs.Screen name="ayuda" options={{ href: null }} />
+        <Tabs.Screen name="terminos" options={{ href: null }} />
+        <Tabs.Screen name="privacidad" options={{ href: null }} />
       </Tabs>
     </AuthGuard>
   )

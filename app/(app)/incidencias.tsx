@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, TextInput, Alert,
+  TouchableOpacity, TextInput, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Line, Rect } from 'react-native-svg';
+import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { Colors } from '@/src/constants/colors';
+import { useAuthStore } from '@/src/store/auth.store';
+import { FirestoreService } from '@/src/services/firestore.service';
 
 function IcoAlerta({ color = Colors.red, size = 28 }: { color?: string; size?: number }) {
   return (
@@ -33,17 +35,52 @@ const CATEGORIAS = [
   { id: 'otro', label: 'Otro' },
 ];
 
-const HISTORIAL_MOCK = [
-  { id: '1', categoria: 'Falla de surtidor', descripcion: 'Surtidor 3 no dispensa correctamente', fecha: 'Hoy 09:14', estado: 'Enviado' },
-  { id: '2', categoria: 'Derrame', descripcion: 'Pequeño derrame en la isla 2', fecha: 'Ayer 15:30', estado: 'Revisado' },
-];
+type IncidenciaItem = {
+  id: string;
+  categoria: string;
+  descripcion: string;
+  timestamp: { seconds: number } | null;
+  estado?: string;
+};
+
+function formatTimestamp(ts: { seconds: number } | null): string {
+  if (!ts) return 'Enviando...';
+  const d = new Date(ts.seconds * 1000);
+  const ahora = new Date();
+  const hoy = ahora.toDateString() === d.toDateString();
+  const ayer = new Date(ahora.getTime() - 86400000).toDateString() === d.toDateString();
+  const hora = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  if (hoy) return `Hoy ${hora}`;
+  if (ayer) return `Ayer ${hora}`;
+  return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) + ' ' + hora;
+}
 
 export default function IncidenciasScreen() {
+  const { user } = useAuthStore();
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [historial, setHistorial] = useState<IncidenciaItem[]>([]);
+  const [cargando, setCargando] = useState(true);
 
-  function handleEnviar() {
+  const cargarHistorial = useCallback(async () => {
+    if (!user) return;
+    setCargando(true);
+    try {
+      const data = await FirestoreService.getIncidenciasByOperario(user.id);
+      setHistorial(data as IncidenciaItem[]);
+    } catch (e) {
+      console.error('Error cargando incidencias:', e);
+    } finally {
+      setCargando(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    cargarHistorial();
+  }, [cargarHistorial]);
+
+  async function handleEnviar() {
     if (!categoriaSeleccionada) {
       Alert.alert('Categoría requerida', 'Selecciona el tipo de incidencia.');
       return;
@@ -52,13 +89,29 @@ export default function IncidenciasScreen() {
       Alert.alert('Descripción requerida', 'Agrega una descripción breve de la incidencia.');
       return;
     }
+    if (!user) return;
+
     setEnviando(true);
-    setTimeout(() => {
-      setEnviando(false);
+    try {
+      await FirestoreService.guardarIncidencia({
+        categoria: CATEGORIAS.find(c => c.id === categoriaSeleccionada)?.label ?? categoriaSeleccionada,
+        descripcion: descripcion.trim(),
+        operarioId: user.id,
+        grifoId: user.id,
+      });
       setCategoriaSeleccionada('');
       setDescripcion('');
-      Alert.alert('Incidencia enviada', 'El reporte fue enviado a la central de Repsol con tu ubicación y hora.');
-    }, 1000);
+      Alert.alert(
+        'Incidencia enviada',
+        'El reporte fue enviado a la central de Repsol con tu ubicación y hora.',
+        [{ text: 'OK', onPress: cargarHistorial }],
+      );
+    } catch (e) {
+      console.error('Error enviando incidencia:', e);
+      Alert.alert('Error', 'No se pudo enviar el reporte. Intenta de nuevo.');
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -118,32 +171,46 @@ export default function IncidenciasScreen() {
             disabled={enviando}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnEnviarText}>{enviando ? 'Enviando...' : 'Enviar reporte'}</Text>
+            {enviando
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={styles.btnEnviarText}>Enviar reporte</Text>
+            }
           </TouchableOpacity>
         </View>
 
         {/* Historial */}
         <Text style={styles.sectionTitle}>Mis reportes recientes</Text>
-        {HISTORIAL_MOCK.map(item => (
-          <View key={item.id} style={styles.historialItem}>
-            <View style={styles.historialLeft}>
-              <Text style={styles.historialCategoria}>{item.categoria}</Text>
-              <Text style={styles.historialDesc}>{item.descripcion}</Text>
-              <Text style={styles.historialFecha}>{item.fecha}</Text>
-            </View>
-            <View style={[
-              styles.estadoBadge,
-              item.estado === 'Revisado' && styles.estadoBadgeOk,
-            ]}>
-              <Text style={[
-                styles.estadoText,
-                item.estado === 'Revisado' && styles.estadoTextOk,
-              ]}>
-                {item.estado}
-              </Text>
-            </View>
+
+        {cargando ? (
+          <ActivityIndicator color={Colors.orange} style={{ marginTop: 20 }} />
+        ) : historial.length === 0 ? (
+          <View style={styles.emptyState}>
+            <IcoAlerta color={Colors.textMuted} size={36} />
+            <Text style={styles.emptyText}>Sin reportes aún</Text>
+            <Text style={styles.emptySubtext}>Tus incidencias enviadas aparecerán aquí</Text>
           </View>
-        ))}
+        ) : (
+          historial.map(item => (
+            <View key={item.id} style={styles.historialItem}>
+              <View style={styles.historialLeft}>
+                <Text style={styles.historialCategoria}>{item.categoria}</Text>
+                <Text style={styles.historialDesc}>{item.descripcion}</Text>
+                <Text style={styles.historialFecha}>{formatTimestamp(item.timestamp)}</Text>
+              </View>
+              <View style={[
+                styles.estadoBadge,
+                item.estado === 'Revisado' && styles.estadoBadgeOk,
+              ]}>
+                <Text style={[
+                  styles.estadoText,
+                  item.estado === 'Revisado' && styles.estadoTextOk,
+                ]}>
+                  {item.estado ?? 'Enviado'}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
 
       </ScrollView>
     </SafeAreaView>
@@ -207,6 +274,10 @@ const styles = StyleSheet.create({
   btnEnviarText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
   sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
+
+  emptyState: { alignItems: 'center', paddingVertical: 32, gap: 8 },
+  emptyText: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
+  emptySubtext: { fontSize: 13, color: Colors.textMuted, textAlign: 'center' },
 
   historialItem: {
     backgroundColor: '#fff',

@@ -1,22 +1,16 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { Colors } from '@/src/constants/colors';
+import { FirestoreService, type CargaData } from '@/src/services/firestore.service';
+import { useAuthStore } from '@/src/store/auth.store';
 
-const COMBUSTIBLES = {
+const COMBUSTIBLES: Record<string, number> = {
   '90 Oct': 2.31,
   '95 Oct': 2.31,
   '97 Oct': 2.31,
   'Diesel B5': 2.68,
 };
-
-const HISTORIAL_MOCK = [
-  { mes: 'Nov 2026', litros: 85, tipo: '95 Oct', co2: 196.35 },
-  { mes: 'Oct 2026', litros: 92, tipo: '90 Oct', co2: 212.52 },
-  { mes: 'Sep 2026', litros: 78, tipo: '95 Oct', co2: 180.18 },
-  { mes: 'Ago 2026', litros: 110, tipo: 'Diesel B5', co2: 294.80 },
-];
 
 const COMPENSACIONES = [
   { id: '1', nombre: 'Siembra 1 árbol', puntos: 500, descripcion: 'Absorbe ~21 kg CO₂/año', icono: '🌳' },
@@ -24,16 +18,83 @@ const COMPENSACIONES = [
   { id: '3', nombre: 'Certificado verde', puntos: 1000, descripcion: 'Offset 10 kg CO₂', icono: '🌿' },
 ];
 
+type HistorialMes = { mes: string; litros: number; tipo: string; co2: number };
+
+function agruparPorMes(cargas: (CargaData & { id: string })[]): HistorialMes[] {
+  const mapa: Record<string, { litros: number; tipo: string; co2: number }> = {};
+  for (const c of cargas) {
+    // fecha puede ser "DD/MM/YYYY" o string libre
+    const partes = c.fecha.split('/');
+    let clave = c.fecha;
+    if (partes.length === 3) {
+      const mes = parseInt(partes[1], 10);
+      const año = partes[2];
+      const nombres = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      clave = `${nombres[mes - 1]} ${año}`;
+    }
+    const litros = parseFloat(c.litros.replace('L', '').trim()) || 0;
+    const factor = COMBUSTIBLES[c.combustible] ?? 2.31;
+    if (!mapa[clave]) mapa[clave] = { litros: 0, tipo: c.combustible, co2: 0 };
+    mapa[clave].litros += litros;
+    mapa[clave].co2 += litros * factor;
+  }
+  return Object.entries(mapa)
+    .map(([mes, v]) => ({ mes, ...v }))
+    .slice(0, 6); // últimos 6 meses
+}
+
 export default function HuellaCarbonoScreen() {
-  const [tab, setTab] = useState<'huella'|'compensar'>('huella');
-  const [puntosMock] = useState(2450);
+  const { user } = useAuthStore();
+  const [tab, setTab] = useState<'huella' | 'compensar'>('huella');
+  const [historial, setHistorial] = useState<HistorialMes[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [puntos, setPuntos] = useState(0);
+  const [canjeando, setCanjeando] = useState<string | null>(null);
 
-  const actual = HISTORIAL_MOCK[0];
-  const anterior = HISTORIAL_MOCK[1];
-  const variacion = (((actual.co2 - anterior.co2) / anterior.co2) * 100).toFixed(1);
-  const mejoró = actual.co2 < anterior.co2;
+  const cargarDatos = useCallback(async () => {
+    if (!user) return;
+    setCargando(true);
+    try {
+      const [cargas, balance] = await Promise.all([
+        FirestoreService.getCargas(user.id),
+        FirestoreService.getBalance(user.id),
+      ]);
+      setHistorial(agruparPorMes(cargas));
+      setPuntos(balance.puntos);
+    } catch (e) {
+      console.error('Error cargando huella:', e);
+    } finally {
+      setCargando(false);
+    }
+  }, [user]);
 
-  const maxCo2 = Math.max(...HISTORIAL_MOCK.map(h => h.co2));
+  useEffect(() => { cargarDatos(); }, [cargarDatos]);
+
+  async function handleCanjear(item: typeof COMPENSACIONES[0]) {
+    if (!user || puntos < item.puntos) return;
+    setCanjeando(item.id);
+    try {
+      await FirestoreService.canjearPuntos(user.id, {
+        nombre: item.nombre,
+        puntos: item.puntos,
+        canjeId: `comp_${item.id}`,
+      });
+      setPuntos(p => p - item.puntos);
+      Alert.alert('¡Canje exitoso!', `Has canjeado "${item.nombre}". ¡Gracias por cuidar el planeta! 🌍`);
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo completar el canje. Intenta de nuevo.');
+    } finally {
+      setCanjeando(null);
+    }
+  }
+
+  const actual = historial[0];
+  const anterior = historial[1];
+  const variacion = actual && anterior
+    ? (((actual.co2 - anterior.co2) / anterior.co2) * 100).toFixed(1)
+    : '0';
+  const mejoró = actual && anterior ? actual.co2 < anterior.co2 : false;
+  const maxCo2 = historial.length > 0 ? Math.max(...historial.map(h => h.co2)) : 1;
 
   return (
     <SafeAreaView style={s.safe}>
@@ -52,36 +113,56 @@ export default function HuellaCarbonoScreen() {
       </View>
 
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
-        {tab === 'huella' ? (
+        {cargando ? (
+          <View style={s.loadingBox}>
+            <ActivityIndicator color={Colors.green} size="large" />
+            <Text style={s.loadingTxt}>Calculando tu huella...</Text>
+          </View>
+        ) : tab === 'huella' ? (
           <>
-            <View style={s.heroBg}>
-              <View style={s.heroCard}>
-                <Text style={s.heroLabel}>Este mes emitiste</Text>
-                <Text style={s.heroNum}>{actual.co2.toFixed(1)}</Text>
-                <Text style={s.heroUnit}>kg CO₂</Text>
-                <View style={s.heroVariacion}>
-                  <Text style={[s.heroVariacionTxt, { color: mejoró ? Colors.green : Colors.red }]}>
-                    {mejoró ? '▼' : '▲'} {Math.abs(parseFloat(variacion))}% vs mes anterior
-                  </Text>
-                </View>
-                <Text style={s.heroDetalle}>{actual.litros} litros · {actual.tipo}</Text>
-              </View>
-            </View>
-
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>Comparativa mensual</Text>
-              <View style={s.barras}>
-                {HISTORIAL_MOCK.map((h, i) => (
-                  <View key={i} style={s.barraCol}>
-                    <Text style={s.barraCo2}>{h.co2.toFixed(0)}</Text>
-                    <View style={s.barraWrap}>
-                      <View style={[s.barra, { height: (h.co2 / maxCo2) * 100, backgroundColor: i === 0 ? Colors.orange : Colors.navyMid }]} />
+            {actual ? (
+              <View style={s.heroBg}>
+                <View style={s.heroCard}>
+                  <Text style={s.heroLabel}>Este mes emitiste</Text>
+                  <Text style={s.heroNum}>{actual.co2.toFixed(1)}</Text>
+                  <Text style={s.heroUnit}>kg CO₂</Text>
+                  {anterior && (
+                    <View style={s.heroVariacion}>
+                      <Text style={[s.heroVariacionTxt, { color: mejoró ? Colors.green : Colors.red }]}>
+                        {mejoró ? '▼' : '▲'} {Math.abs(parseFloat(variacion))}% vs mes anterior
+                      </Text>
                     </View>
-                    <Text style={s.barraMes}>{h.mes.split(' ')[0]}</Text>
-                  </View>
-                ))}
+                  )}
+                  <Text style={s.heroDetalle}>{actual.litros.toFixed(0)} litros · {actual.tipo}</Text>
+                </View>
               </View>
-            </View>
+            ) : (
+              <View style={s.heroBg}>
+                <View style={s.heroCard}>
+                  <Text style={s.heroLabel}>Sin datos aún</Text>
+                  <Text style={[s.heroNum, { fontSize: 32 }]}>0</Text>
+                  <Text style={s.heroUnit}>kg CO₂</Text>
+                  <Text style={s.heroDetalle}>Realiza cargas para ver tu huella</Text>
+                </View>
+              </View>
+            )}
+
+            {historial.length > 0 && (
+              <View style={s.section}>
+                <Text style={s.sectionTitle}>Comparativa mensual</Text>
+                <View style={s.barras}>
+                  {historial.map((h, i) => (
+                    <View key={i} style={s.barraCol}>
+                      <Text style={s.barraCo2}>{h.co2.toFixed(0)}</Text>
+                      <View style={s.barraWrap}>
+                        <View style={[s.barra, { height: (h.co2 / maxCo2) * 100, backgroundColor: i === 0 ? Colors.orange : Colors.navyMid }]} />
+                      </View>
+                      <Text style={s.barraMes}>{h.mes.split(' ')[0]}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
 
             <View style={s.section}>
               <Text style={s.sectionTitle}>Factor por combustible</Text>
@@ -107,7 +188,7 @@ export default function HuellaCarbonoScreen() {
           <>
             <View style={s.puntosHeader}>
               <Text style={s.puntosLabel}>Puntos verdes disponibles</Text>
-              <Text style={s.puntosNum}>💚 {puntosMock.toLocaleString()} pts</Text>
+              <Text style={s.puntosNum}>💚 {puntos.toLocaleString()} pts</Text>
             </View>
 
             <Text style={s.compensarSubtitulo}>
@@ -124,10 +205,15 @@ export default function HuellaCarbonoScreen() {
                 <View style={s.compDer}>
                   <Text style={s.compPts}>{item.puntos} pts</Text>
                   <TouchableOpacity
-                    style={[s.compBtn, puntosMock < item.puntos && s.compBtnDisabled]}
-                    disabled={puntosMock < item.puntos}
+                    style={[s.compBtn, (puntos < item.puntos || canjeando === item.id) && s.compBtnDisabled]}
+                    disabled={puntos < item.puntos || canjeando !== null}
+                    onPress={() => handleCanjear(item)}
                   >
-                    <Text style={s.compBtnTxt}>Canjear</Text>
+                    {canjeando === item.id ? (
+                      <ActivityIndicator color={Colors.white} size="small" />
+                    ) : (
+                      <Text style={s.compBtnTxt}>Canjear</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -157,6 +243,8 @@ const s = StyleSheet.create({
   tabTxt: { fontSize: 14, fontWeight: '600', color: Colors.textMuted },
   tabTxtActivo: { color: Colors.green },
   scroll: { flex: 1 },
+  loadingBox: { paddingTop: 60, alignItems: 'center', gap: 12 },
+  loadingTxt: { fontSize: 14, color: Colors.textMuted },
   heroBg: { backgroundColor: '#1A6B3C', paddingBottom: 24, paddingHorizontal: 20 },
   heroCard: { backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 16, padding: 20, alignItems: 'center' },
   heroLabel: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },

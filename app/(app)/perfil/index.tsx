@@ -230,9 +230,9 @@ export default function PerfilScreen() {
         </Section>
 
         <Section title="Soporte">
-          <MenuItem icon={<IcoHelpCircle />} label="Ayuda y soporte" onPress={() => Alert.alert('Próximamente')} />
-          <MenuItem icon={<IcoFileText />} label="Términos y condiciones" onPress={() => Alert.alert('Próximamente')} />
-          <MenuItem icon={<IcoShield />} label="Política de privacidad" onPress={() => Alert.alert('Próximamente')} last />
+          <MenuItem icon={<IcoHelpCircle />} label="Ayuda y soporte" onPress={() => router.push('/(app)/ayuda')} />
+          <MenuItem icon={<IcoFileText />} label="Términos y condiciones" onPress={() => router.push('/(app)/terminos')} />
+          <MenuItem icon={<IcoShield />} label="Política de privacidad" onPress={() => router.push('/(app)/privacidad')} last />
         </Section>
 
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>

@@ -1,18 +1,27 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Star, Polygon } from 'react-native-svg';
+import Svg, { Path, Circle, Polygon } from 'react-native-svg';
 import { Colors } from '@/src/constants/colors';
+import { useAuthStore } from '@/src/store/auth.store';
+import {
+  collection, getDocs, addDoc, query, orderBy, serverTimestamp, doc, getDoc,
+} from 'firebase/firestore';
+import { db } from '@/src/lib/firebase';
 
-const GRIFOS_MOCK = [
-  { id: '1', nombre: 'Grifo Miraflores Centro', direccion: 'Av. Larco 345, Miraflores', limpieza: 4.8, atencion: 4.9, velocidad: 4.7, votos: 234, favorito: false },
-  { id: '2', nombre: 'Grifo San Isidro Norte', direccion: 'Av. Javier Prado 1200, San Isidro', limpieza: 4.6, atencion: 4.5, velocidad: 4.8, votos: 189, favorito: true },
-  { id: '3', nombre: 'Grifo Surco Principal', direccion: 'Av. Primavera 890, Surco', limpieza: 4.4, atencion: 4.6, velocidad: 4.3, votos: 156, favorito: false },
-  { id: '4', nombre: 'Grifo La Molina', direccion: 'Av. La Molina 450, La Molina', limpieza: 4.2, atencion: 4.0, velocidad: 4.5, votos: 98, favorito: false },
-  { id: '5', nombre: 'Grifo Barranco', direccion: 'Av. Grau 234, Barranco', limpieza: 3.9, atencion: 4.2, velocidad: 3.8, votos: 72, favorito: false },
-];
+type GrifoFirestore = {
+  id: string;
+  nombre: string;
+  direccion: string;
+  limpieza: number;
+  atencion: number;
+  velocidad: number;
+  votos: number;
+};
 
-function promedio(g: typeof GRIFOS_MOCK[0]) {
+type Filtro = 'general' | 'limpieza' | 'atencion' | 'velocidad';
+
+function promedio(g: GrifoFirestore) {
   return ((g.limpieza + g.atencion + g.velocidad) / 3).toFixed(1);
 }
 
@@ -21,7 +30,7 @@ function StarRow({ valor, label }: { valor: number; label: string }) {
     <View style={s.starRow}>
       <Text style={s.starLabel}>{label}</Text>
       <View style={s.starsWrap}>
-        {[1,2,3,4,5].map(i => (
+        {[1, 2, 3, 4, 5].map(i => (
           <Svg key={i} width={10} height={10} viewBox="0 0 24 24">
             <Polygon
               points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
@@ -47,30 +56,83 @@ function MedallaBadge({ pos }: { pos: number }) {
   );
 }
 
-type Filtro = 'general' | 'limpieza' | 'atencion' | 'velocidad';
-
 export default function RankingGrifosScreen() {
+  const { user } = useAuthStore();
+  const [grifos, setGrifos] = useState<GrifoFirestore[]>([]);
+  const [cargando, setCargando] = useState(true);
   const [filtro, setFiltro] = useState<Filtro>('general');
   const [busqueda, setBusqueda] = useState('');
   const [votando, setVotando] = useState<string | null>(null);
   const [votos, setVotos] = useState<Record<string, Record<string, number>>>({});
+  const [enviandoVoto, setEnviandoVoto] = useState(false);
 
-  const grifos = [...GRIFOS_MOCK]
-    .filter(g => g.nombre.toLowerCase().includes(busqueda.toLowerCase()) || g.direccion.toLowerCase().includes(busqueda.toLowerCase()))
+  const cargarGrifos = useCallback(async () => {
+    setCargando(true);
+    try {
+      const snap = await getDocs(query(collection(db, 'grifos'), orderBy('votos', 'desc')));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as GrifoFirestore));
+      setGrifos(data);
+    } catch (e) {
+      console.error('Error cargando grifos:', e);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => { cargarGrifos(); }, [cargarGrifos]);
+
+  function votar(grifoId: string, cat: string, val: number) {
+    setVotos(prev => ({ ...prev, [grifoId]: { ...(prev[grifoId] || {}), [cat]: val } }));
+  }
+
+  async function enviarVoto(grifoId: string) {
+    if (!user) return;
+    const voto = votos[grifoId];
+    if (!voto?.limpieza || !voto?.atencion || !voto?.velocidad) {
+      Alert.alert('Calificación incompleta', 'Por favor califica las 3 categorías.');
+      return;
+    }
+    setEnviandoVoto(true);
+    try {
+      await addDoc(collection(db, 'grifos', grifoId, 'votos'), {
+        uid: user.id,
+        limpieza: voto.limpieza,
+        atencion: voto.atencion,
+        velocidad: voto.velocidad,
+        timestamp: serverTimestamp(),
+      });
+      // Recalcular promedio del grifo
+      const votosSnap = await getDocs(collection(db, 'grifos', grifoId, 'votos'));
+      const todos = votosSnap.docs.map(d => d.data());
+      const avg = (campo: string) => todos.reduce((s, v) => s + (v[campo] || 0), 0) / todos.length;
+      const { updateDoc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'grifos', grifoId), {
+        limpieza: parseFloat(avg('limpieza').toFixed(2)),
+        atencion: parseFloat(avg('atencion').toFixed(2)),
+        velocidad: parseFloat(avg('velocidad').toFixed(2)),
+        votos: todos.length,
+      });
+      setVotando(null);
+      Alert.alert('¡Gracias!', 'Tu calificación fue registrada.');
+      await cargarGrifos();
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo enviar tu voto. Intenta de nuevo.');
+    } finally {
+      setEnviandoVoto(false);
+    }
+  }
+
+  const grifosFiltrados = [...grifos]
+    .filter(g =>
+      g.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      g.direccion?.toLowerCase().includes(busqueda.toLowerCase())
+    )
     .sort((a, b) => {
       if (filtro === 'limpieza') return b.limpieza - a.limpieza;
       if (filtro === 'atencion') return b.atencion - a.atencion;
       if (filtro === 'velocidad') return b.velocidad - a.velocidad;
       return parseFloat(promedio(b)) - parseFloat(promedio(a));
     });
-
-  function votar(grifoId: string, cat: string, val: number) {
-    setVotos(prev => ({ ...prev, [grifoId]: { ...(prev[grifoId] || {}), [cat]: val } }));
-  }
-
-  function enviarVoto(grifoId: string) {
-    setVotando(null);
-  }
 
   return (
     <SafeAreaView style={s.safe}>
@@ -94,7 +156,7 @@ export default function RankingGrifosScreen() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtroScroll} contentContainerStyle={s.filtros}>
-        {(['general','limpieza','atencion','velocidad'] as Filtro[]).map(f => (
+        {(['general', 'limpieza', 'atencion', 'velocidad'] as Filtro[]).map(f => (
           <TouchableOpacity key={f} style={[s.filtroBtn, filtro === f && s.filtroBtnActivo]} onPress={() => setFiltro(f)}>
             <Text style={[s.filtroTxt, filtro === f && s.filtroTxtActivo]}>
               {f === 'general' ? '⭐ General' : f === 'limpieza' ? '🧹 Limpieza' : f === 'atencion' ? '😊 Atención' : '⚡ Velocidad'}
@@ -103,66 +165,81 @@ export default function RankingGrifosScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView style={s.lista} showsVerticalScrollIndicator={false}>
-        {grifos.map((g, idx) => (
-          <View key={g.id} style={s.card}>
-            <View style={s.cardTop}>
-              <View style={s.posWrap}><MedallaBadge pos={idx + 1} /></View>
-              <View style={s.cardInfo}>
-                <Text style={s.cardNombre}>{g.nombre}</Text>
-                <Text style={s.cardDir}>{g.direccion}</Text>
-                <Text style={s.cardVotos}>{g.votos} votos</Text>
-              </View>
-              <View style={s.promedioWrap}>
-                <Text style={s.promedioNum}>{promedio(g)}</Text>
-                <Text style={s.promedioLbl}>/ 5.0</Text>
-              </View>
-            </View>
-            <View style={s.cardStars}>
-              <StarRow valor={g.limpieza} label="Limpieza" />
-              <StarRow valor={g.atencion} label="Atención" />
-              <StarRow valor={g.velocidad} label="Velocidad" />
-            </View>
-            {votando === g.id ? (
-              <View style={s.votarForm}>
-                <Text style={s.votarTitle}>Tu calificación</Text>
-                {(['limpieza','atencion','velocidad'] as const).map(cat => (
-                  <View key={cat} style={s.votarCat}>
-                    <Text style={s.votarCatLabel}>{cat.charAt(0).toUpperCase()+cat.slice(1)}</Text>
-                    <View style={s.votarEstrellas}>
-                      {[1,2,3,4,5].map(n => (
-                        <TouchableOpacity key={n} onPress={() => votar(g.id, cat, n)}>
-                          <Svg width={28} height={28} viewBox="0 0 24 24">
-                            <Polygon
-                              points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
-                              fill={n <= (votos[g.id]?.[cat] || 0) ? Colors.orange : '#E5E7EB'}
-                              stroke={n <= (votos[g.id]?.[cat] || 0) ? Colors.orange : '#E5E7EB'}
-                              strokeWidth={1}
-                            />
-                          </Svg>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                ))}
-                <View style={s.votarBtns}>
-                  <TouchableOpacity style={s.votarCancel} onPress={() => setVotando(null)}>
-                    <Text style={s.votarCancelTxt}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.votarEnviar} onPress={() => enviarVoto(g.id)}>
-                    <Text style={s.votarEnviarTxt}>Enviar voto</Text>
-                  </TouchableOpacity>
+      {cargando ? (
+        <View style={s.loadingBox}>
+          <ActivityIndicator color={Colors.orange} size="large" />
+          <Text style={s.loadingTxt}>Cargando ranking...</Text>
+        </View>
+      ) : grifosFiltrados.length === 0 ? (
+        <View style={s.loadingBox}>
+          <Text style={s.loadingTxt}>No hay grifos disponibles aún.</Text>
+        </View>
+      ) : (
+        <ScrollView style={s.lista} showsVerticalScrollIndicator={false}>
+          {grifosFiltrados.map((g, idx) => (
+            <View key={g.id} style={s.card}>
+              <View style={s.cardTop}>
+                <View style={s.posWrap}><MedallaBadge pos={idx + 1} /></View>
+                <View style={s.cardInfo}>
+                  <Text style={s.cardNombre}>{g.nombre}</Text>
+                  <Text style={s.cardDir}>{g.direccion}</Text>
+                  <Text style={s.cardVotos}>{g.votos} votos</Text>
+                </View>
+                <View style={s.promedioWrap}>
+                  <Text style={s.promedioNum}>{promedio(g)}</Text>
+                  <Text style={s.promedioLbl}>/ 5.0</Text>
                 </View>
               </View>
-            ) : (
-              <TouchableOpacity style={s.votarBtn} onPress={() => setVotando(g.id)}>
-                <Text style={s.votarBtnTxt}>⭐ Calificar este grifo</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
-        <View style={{ height: 24 }} />
-      </ScrollView>
+              <View style={s.cardStars}>
+                <StarRow valor={g.limpieza} label="Limpieza" />
+                <StarRow valor={g.atencion} label="Atención" />
+                <StarRow valor={g.velocidad} label="Velocidad" />
+              </View>
+              {votando === g.id ? (
+                <View style={s.votarForm}>
+                  <Text style={s.votarTitle}>Tu calificación</Text>
+                  {(['limpieza', 'atencion', 'velocidad'] as const).map(cat => (
+                    <View key={cat} style={s.votarCat}>
+                      <Text style={s.votarCatLabel}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</Text>
+                      <View style={s.votarEstrellas}>
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <TouchableOpacity key={n} onPress={() => votar(g.id, cat, n)}>
+                            <Svg width={28} height={28} viewBox="0 0 24 24">
+                              <Polygon
+                                points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
+                                fill={n <= (votos[g.id]?.[cat] || 0) ? Colors.orange : '#E5E7EB'}
+                                stroke={n <= (votos[g.id]?.[cat] || 0) ? Colors.orange : '#E5E7EB'}
+                                strokeWidth={1}
+                              />
+                            </Svg>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                  <View style={s.votarBtns}>
+                    <TouchableOpacity style={s.votarCancel} onPress={() => setVotando(null)} disabled={enviandoVoto}>
+                      <Text style={s.votarCancelTxt}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={s.votarEnviar} onPress={() => enviarVoto(g.id)} disabled={enviandoVoto}>
+                      {enviandoVoto ? (
+                        <ActivityIndicator color={Colors.white} size="small" />
+                      ) : (
+                        <Text style={s.votarEnviarTxt}>Enviar voto</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity style={s.votarBtn} onPress={() => setVotando(g.id)}>
+                  <Text style={s.votarBtnTxt}>⭐ Calificar este grifo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+          <View style={{ height: 24 }} />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -180,6 +257,8 @@ const s = StyleSheet.create({
   filtroBtnActivo: { backgroundColor: Colors.orange, borderColor: Colors.orange },
   filtroTxt: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   filtroTxtActivo: { color: Colors.white },
+  loadingBox: { paddingTop: 60, alignItems: 'center', gap: 12 },
+  loadingTxt: { fontSize: 14, color: Colors.textMuted },
   lista: { flex: 1, paddingHorizontal: 16, paddingTop: 12 },
   card: { backgroundColor: Colors.white, borderRadius: 14, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 3 },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
