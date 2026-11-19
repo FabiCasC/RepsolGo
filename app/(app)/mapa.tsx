@@ -161,8 +161,10 @@ export default function MapaScreen() {
           <UrlTile
             urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
             maximumZ={19}
+            minimumZ={0}
             flipY={false}
             tileSize={256}
+            offlineMode={false}
           />
 
           {filteredGrifos.map(grifo => (
