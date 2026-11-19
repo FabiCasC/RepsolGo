@@ -149,7 +149,7 @@ export default function MapaScreen() {
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
-          style={StyleSheet.absoluteFillObject}
+          style={{ flex: 1 }}
           provider={PROVIDER_DEFAULT}
           initialRegion={Config.LIMA_CENTER as Region}
           showsUserLocation={locationReady}
@@ -232,11 +232,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mapContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
+    flex: 1,
   },
   searchOverlay: {
     position: 'absolute',
