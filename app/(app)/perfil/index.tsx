@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, Switch, Image,
@@ -9,6 +9,7 @@ import Svg, { Path, Circle, Rect, Lock, Polyline, ChevronRight } from 'react-nat
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuthStore } from '@/src/store/auth.store';
 import { Colors } from '@/src/constants/colors';
+import { FirestoreService } from '@/src/services/firestore.service';
 
 // ── Iconos ────────────────────────────────────────────────────────────────────
 
@@ -108,6 +109,19 @@ export default function PerfilScreen() {
   const { user, logout, updateUser } = useAuthStore();
   const [notifPush, setNotifPush] = useState(true);
   const [notifEmail, setNotifEmail] = useState(false);
+  const [stats, setStats] = useState({ puntos: 0, cargas: 0, retos: 0 });
+
+  useEffect(() => {
+    if (!user?.uid && !user?.id) return;
+    const uid = user.uid ?? user.id;
+    FirestoreService.getBalance(uid).then(bal => {
+      setStats(prev => ({ ...prev, puntos: bal.total, cargas: bal.cargas }));
+    }).catch(() => {});
+    FirestoreService.getRetos(uid).then((retosData: any[]) => {
+      const ganados = retosData.filter((r: any) => r.completado === true).length;
+      setStats(prev => ({ ...prev, retos: ganados }));
+    }).catch(() => {});
+  }, [user?.uid, user?.id]);
 
   async function handleToggleBiometric(val: boolean) {
     if (val) {
@@ -169,15 +183,15 @@ export default function PerfilScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
-            <Text style={styles.statVal}>4,820</Text>
+            <Text style={styles.statVal}>{stats.puntos.toLocaleString('es-PE')}</Text>
             <Text style={styles.statLabel}>Puntos</Text>
           </View>
           <View style={[styles.statBox, styles.statBorder]}>
-            <Text style={styles.statVal}>8</Text>
+            <Text style={styles.statVal}>{stats.cargas}</Text>
             <Text style={styles.statLabel}>Cargas</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statVal}>2</Text>
+            <Text style={styles.statVal}>{stats.retos}</Text>
             <Text style={styles.statLabel}>Retos</Text>
           </View>
         </View>
