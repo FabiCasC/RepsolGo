@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react'
-import { Stack, Redirect } from 'expo-router'
+import React, { useEffect, useState } from 'react'
+import { Stack } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StatusBar } from 'expo-status-bar'
 import { View, ActivityIndicator } from 'react-native'
+import { getFirebaseAuth } from '../src/lib/firebase'
 import { useAuthStore } from '../src/store/auth.store'
 import { Colors } from '../src/constants/colors'
 
@@ -17,12 +18,21 @@ const queryClient = new QueryClient({
 
 function RootNavigator() {
   const { isAuthenticated, isLoading, user, checkAuth } = useAuthStore()
+  const [authReady, setAuthReady] = useState(false)
 
   useEffect(() => {
+    // Inicializar Firebase Auth AQUI, dentro de un componente montado,
+    // cuando React Native ya registró todos los módulos nativos
+    try {
+      getFirebaseAuth()
+    } catch (e) {
+      console.warn('Firebase auth init error:', e)
+    }
+    setAuthReady(true)
     checkAuth()
-  }, [checkAuth])
+  }, [])
 
-  if (isLoading) {
+  if (!authReady || isLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.navy }}>
         <ActivityIndicator size="large" color={Colors.orange} />
@@ -58,12 +68,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(app)" />
-        <Stack.Screen name="(operario)" />
-      </Stack>
+      <RootNavigator />
     </QueryClientProvider>
   )
 }

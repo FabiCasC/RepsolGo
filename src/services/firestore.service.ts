@@ -12,7 +12,7 @@ import {
   serverTimestamp,
   increment,
   Timestamp,
-} from 'firebase/firestore'
+} from '@firebase/firestore'
 import { db } from '../lib/firebase'
 import type { User, Grifo, Reto } from '../types'
 

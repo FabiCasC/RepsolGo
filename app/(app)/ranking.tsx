@@ -6,7 +6,7 @@ import { Colors } from '@/src/constants/colors';
 import { useAuthStore } from '@/src/store/auth.store';
 import {
   collection, getDocs, addDoc, query, orderBy, serverTimestamp, doc, getDoc,
-} from 'firebase/firestore';
+} from '@firebase/firestore';
 import { db } from '@/src/lib/firebase';
 
 type GrifoFirestore = {

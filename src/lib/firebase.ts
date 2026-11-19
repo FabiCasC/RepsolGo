@@ -1,6 +1,9 @@
-import { initializeApp, getApps, getApp } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
-import { initializeAuth, getAuth, inMemoryPersistence } from 'firebase/auth'
+// Importar directamente desde los bundles React Native de Firebase
+// Evita que Metro resuelva al bundle browser por falta del campo react-native
+// en los subpaquetes de firebase/*
+import { initializeApp, getApps, getApp } from '@firebase/app'
+import { getFirestore } from '@firebase/firestore'
+import { initializeAuth, getReactNativePersistence, getAuth } from '@firebase/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const firebaseConfig = {
@@ -13,21 +16,24 @@ const firebaseConfig = {
 }
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
-
-// AsyncStorage-backed persistence for React Native
-// Firebase JS SDK v10+ for React Native uses inMemoryPersistence at runtime,
-// but we handle session restore ourselves via onAuthStateChanged + AsyncStorage.
-let auth: ReturnType<typeof getAuth>
-try {
-  auth = initializeAuth(app, {
-    persistence: inMemoryPersistence,
-  })
-} catch {
-  auth = getAuth(app)
-}
-
-export { auth }
 export const db = getFirestore(app)
-export { AsyncStorage }
-
 export default app
+
+let _auth: ReturnType<typeof getAuth> | null = null
+
+export function getFirebaseAuth() {
+  if (_auth) return _auth
+  try {
+    _auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (msg.includes('already')) {
+      _auth = getAuth(app)
+    } else {
+      throw e
+    }
+  }
+  return _auth!
+}

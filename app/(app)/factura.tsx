@@ -7,7 +7,7 @@ import { FirestoreService, type CargaData } from '@/src/services/firestore.servi
 import { useAuthStore } from '@/src/store/auth.store';
 import {
   doc, updateDoc, collection, addDoc, serverTimestamp
-} from 'firebase/firestore';
+} from '@firebase/firestore';
 import { db } from '@/src/lib/firebase';
 
 type TipoComprobante = 'boleta' | 'factura';

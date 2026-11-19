@@ -16,7 +16,7 @@ import { Colors } from '../../src/constants/colors'
 import { Button } from '../../src/components/ui/Button'
 import { FirestoreService } from '../../src/services/firestore.service'
 import { useAuthStore } from '../../src/store/auth.store'
-import { Timestamp } from 'firebase/firestore'
+import { Timestamp } from '@firebase/firestore'
 
 type Categoria = 'derrame' | 'falla_surtidor' | 'accidente' | 'otro'
 

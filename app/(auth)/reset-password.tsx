@@ -4,7 +4,7 @@ import {
   Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { confirmPasswordReset } from 'firebase/auth';
+import { confirmPasswordReset } from '@firebase/auth';
 import { auth } from '@/src/lib/firebase';
 import { Colors } from '@/src/constants/colors';
 

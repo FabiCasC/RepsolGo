@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router'
 import { Colors } from '../../../src/constants/colors'
 import { useAuthStore } from '../../../src/store/auth.store'
 import { FirestoreService } from '../../../src/services/firestore.service'
-import { Timestamp } from 'firebase/firestore'
+import { Timestamp } from '@firebase/firestore'
 
 interface Carga {
   id: string

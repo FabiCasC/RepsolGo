@@ -4,10 +4,10 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-} from 'firebase/auth'
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
+} from '@firebase/auth'
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from '@firebase/firestore'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { auth, db } from '../lib/firebase'
+import { getFirebaseAuth, db } from '../lib/firebase'
 import type { User, NivelFidelizacion } from '../types'
 
 const SESSION_KEY = 'repsolgo_session'
@@ -51,6 +51,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true })
     try {
+      const auth = getFirebaseAuth()
       const credential = await signInWithEmailAndPassword(auth, email, password)
       const user = await fetchUserProfile(credential.user.uid, email)
       const session: StoredSession = { uid: credential.user.uid, email }
@@ -65,6 +66,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (nombre: string, email: string, password: string, rol: 'cliente' | 'operario' = 'cliente') => {
     set({ isLoading: true })
     try {
+      const auth = getFirebaseAuth()
       const credential = await createUserWithEmailAndPassword(auth, email, password)
       const uid = credential.user.uid
       const userData = {
@@ -89,6 +91,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    const auth = getFirebaseAuth()
     await signOut(auth)
     await AsyncStorage.removeItem(SESSION_KEY)
     set({ user: null, isAuthenticated: false })
@@ -113,7 +116,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   checkAuth: () => {
     set({ isLoading: true })
-    // First try to restore from AsyncStorage (Firebase inMemory doesn't persist)
     AsyncStorage.getItem(SESSION_KEY)
       .then(async (sessionJson) => {
         if (sessionJson) {
@@ -126,7 +128,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             await AsyncStorage.removeItem(SESSION_KEY)
           }
         }
-        // Fall back to Firebase auth state
+        const auth = getFirebaseAuth()
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
             try {

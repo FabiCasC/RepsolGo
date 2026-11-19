@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
-import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from '@firebase/auth';
 import { auth } from '@/src/lib/firebase';
 import { useAuthStore } from '@/src/store/auth.store';
 import { Colors } from '@/src/constants/colors';

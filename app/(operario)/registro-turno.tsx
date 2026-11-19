@@ -12,7 +12,7 @@ import * as Location from 'expo-location'
 import { Colors } from '../../src/constants/colors'
 import { FirestoreService } from '../../src/services/firestore.service'
 import { useAuthStore } from '../../src/store/auth.store'
-import { Timestamp } from 'firebase/firestore'
+import { Timestamp } from '@firebase/firestore'
 
 interface Turno {
   id: string
