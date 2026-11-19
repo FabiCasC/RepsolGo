@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import {
   View,
   Text,
@@ -8,9 +8,11 @@ import {
 } from 'react-native'
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import Svg, { Path, Circle, Polyline, Line } from 'react-native-svg'
+import Svg, { Path, Circle, Polyline } from 'react-native-svg'
 import { Colors } from '../../src/constants/colors'
 import { Button } from '../../src/components/ui/Button'
+import { FirestoreService } from '../../src/services/firestore.service'
+import { useAuthStore } from '../../src/store/auth.store'
 
 function IcoCamera({ color = Colors.navy, size = 48 }: { color?: string; size?: number }) {
   return (
@@ -38,7 +40,7 @@ function IcoCheckCircle({ color = '#16A34A', size = 36 }: { color?: string; size
   );
 }
 
-type EscanearState = 'camera' | 'processing' | 'result' | 'confirmed'
+type EscanearState = 'camera' | 'processing' | 'result' | 'saving' | 'confirmed' | 'error'
 
 interface BoletaData {
   grifo: string
@@ -51,7 +53,7 @@ interface BoletaData {
 
 const MOCK_BOLETA: BoletaData = {
   grifo: 'Repsol Javier Prado Este',
-  fecha: '14/10/2026',
+  fecha: new Date().toLocaleDateString('es-PE'),
   litros: '22L',
   monto: 'S/349.80',
   combustible: '95 oct',
@@ -62,6 +64,11 @@ export default function EscanearScreen() {
   const [permission, requestPermission] = useCameraPermissions()
   const [state, setState] = useState<EscanearState>('camera')
   const [boletaData, setBoletaData] = useState<BoletaData | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string>('')
+  const [puntosAcreditados, setPuntosAcreditados] = useState<number>(0)
+
+  const user = useAuthStore(s => s.user)
+  const updateUser = useAuthStore(s => s.updateUser)
 
   if (!permission) {
     return <View style={styles.loadingContainer} />
@@ -99,15 +106,58 @@ export default function EscanearScreen() {
 
   function handleReset() {
     setBoletaData(null)
+    setErrorMsg('')
     setState('camera')
   }
 
-  function handleConfirm() {
-    // ✅ No Alert.alert — usamos estado en pantalla (Hermes / New Architecture safe)
-    setState('confirmed')
+  async function handleConfirm() {
+    if (!boletaData || !user?.id) {
+      setErrorMsg('No se pudo identificar tu cuenta. Vuelve a iniciar sesión.')
+      setState('error')
+      return
+    }
+
+    setState('saving')
+
+    try {
+      // CRUD REAL: guarda en users/{uid}/cargas e incrementa users/{uid}.puntos
+      await FirestoreService.addCarga(user.id, {
+        grifoNombre: boletaData.grifo,
+        fecha: boletaData.fecha,
+        litros: boletaData.litros,
+        monto: boletaData.monto,
+        combustible: boletaData.combustible,
+        puntos: boletaData.puntos,
+      })
+
+      // Actualiza nivel si corresponde (Bronce->Plata->Oro->Platino->Diamante)
+      const nuevosPuntos = (user.puntos ?? 0) + boletaData.puntos
+      await FirestoreService.actualizarNivel(user.id, nuevosPuntos)
+
+      // Refleja puntos en el store local sin re-fetch
+      await updateUser({ puntos: nuevosPuntos })
+
+      setPuntosAcreditados(boletaData.puntos)
+      setState('confirmed')
+    } catch (err) {
+      console.error('[Escanear] Error guardando carga:', err)
+      setErrorMsg('No se pudieron acreditar los puntos. Revisa tu conexión e intenta de nuevo.')
+      setState('error')
+    }
   }
 
-  // ── Estado: confirmación exitosa ─────────────────────────────────────────
+  // Estado: guardando en Firestore
+  if (state === 'saving') {
+    return (
+      <View style={styles.processingContainer}>
+        <ActivityIndicator size="large" color={Colors.orange} />
+        <Text style={styles.processingTitle}>Acreditando puntos...</Text>
+        <Text style={styles.processingSubtitle}>Guardando en tu cuenta</Text>
+      </View>
+    )
+  }
+
+  // Estado: confirmacion exitosa
   if (state === 'confirmed') {
     return (
       <SafeAreaView style={styles.resultContainer} edges={['top', 'bottom']}>
@@ -115,10 +165,15 @@ export default function EscanearScreen() {
           <View style={[styles.successBadge, { width: 90, height: 90, borderRadius: 45, marginBottom: 24 }]}>
             <IcoCheckCircle color="#059669" size={48} />
           </View>
-          <Text style={[styles.resultTitle, { fontSize: 26 }]}>¡Puntos acreditados!</Text>
+          <Text style={[styles.resultTitle, { fontSize: 26 }]}>Puntos acreditados!</Text>
           <Text style={[styles.resultSubtitle, { marginTop: 8, fontSize: 15, textAlign: 'center' }]}>
-            +{MOCK_BOLETA.puntos} puntos han sido añadidos a tu cuenta.
+            +{puntosAcreditados} puntos han sido anadidos a tu cuenta.
           </Text>
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ fontSize: 13, color: Colors.textSecondary, textAlign: 'center' }}>
+              Total acumulado: {(user?.puntos ?? 0)} pts
+            </Text>
+          </View>
           <View style={{ marginTop: 48, width: '100%' }}>
             <Button
               label="Escanear otra boleta"
@@ -131,17 +186,50 @@ export default function EscanearScreen() {
     )
   }
 
-  // ── Estado: cámara ───────────────────────────────────────────────────────
+  // Estado: error
+  if (state === 'error') {
+    return (
+      <SafeAreaView style={styles.resultContainer} edges={['top', 'bottom']}>
+        <View style={[styles.resultContent, { justifyContent: 'center', alignItems: 'center' }]}>
+          <View style={[styles.successBadge, { width: 90, height: 90, borderRadius: 45, marginBottom: 24, backgroundColor: '#FEE2E2' }]}>
+            <Svg width={48} height={48} viewBox="0 0 24 24" fill="none">
+              <Circle cx="12" cy="12" r="10" stroke="#DC2626" strokeWidth={1.8} />
+              <Path d="M15 9l-6 6M9 9l6 6" stroke="#DC2626" strokeWidth={1.8} strokeLinecap="round" />
+            </Svg>
+          </View>
+          <Text style={[styles.resultTitle, { fontSize: 22, color: '#DC2626' }]}>Error al acreditar</Text>
+          <Text style={[styles.resultSubtitle, { marginTop: 8, fontSize: 14, textAlign: 'center' }]}>
+            {errorMsg}
+          </Text>
+          <View style={{ marginTop: 48, width: '100%' }}>
+            <Button
+              label="Intentar de nuevo"
+              onPress={() => setState('result')}
+              fullWidth
+              style={{ marginBottom: 12 }}
+            />
+            <Button
+              label="Volver a escanear"
+              onPress={handleReset}
+              variant="outline"
+              fullWidth
+            />
+          </View>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  // Estado: camara
   if (state === 'camera') {
     return (
-      // ✅ FIX: CameraView NO tiene children — el overlay va FUERA con absoluteFillObject
       <View style={styles.cameraContainer}>
         <CameraView
-          style={StyleSheet.absoluteFillObject}
+          style={{ flex: 1 }}
           facing="back"
         />
         <SafeAreaView
-          style={[styles.cameraOverlay, StyleSheet.absoluteFillObject]}
+          style={[StyleSheet.absoluteFillObject, styles.cameraOverlay]}
           edges={['top', 'bottom']}
         >
           <View style={styles.cameraHeader}>
@@ -155,14 +243,14 @@ export default function EscanearScreen() {
               <View style={[styles.corner, styles.cornerTR]} />
               <View style={[styles.corner, styles.cornerBL]} />
               <View style={[styles.corner, styles.cornerBR]} />
-              <Text style={styles.guideText}>Encuadra tu boleta aquí</Text>
+              <Text style={styles.guideText}>Encuadra tu boleta aqui</Text>
             </View>
           </View>
 
           <View style={styles.captureArea}>
             <View style={styles.captureTipRow}>
               <IcoLightbulb />
-              <Text style={styles.captureTip}>Asegúrate de que el texto sea legible</Text>
+              <Text style={styles.captureTip}>Asegurate de que el texto sea legible</Text>
             </View>
             <TouchableOpacity style={styles.captureBtn} onPress={handleCapture} activeOpacity={0.85}>
               <View style={styles.captureBtnInner} />
@@ -188,6 +276,7 @@ export default function EscanearScreen() {
     )
   }
 
+  // Estado: resultado / confirmacion
   return (
     <SafeAreaView style={styles.resultContainer} edges={['top', 'bottom']}>
       <View style={styles.resultContent}>
@@ -249,299 +338,55 @@ const CORNER_SIZE = 24
 const CORNER_THICKNESS = 3
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: Colors.navy,
-  },
-  permissionContainer: {
-    flex: 1,
-    backgroundColor: Colors.white,
-  },
-  permissionContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  permissionIconBox: {
-    marginBottom: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 96,
-    height: 96,
-    borderRadius: 28,
-    backgroundColor: '#EEF2FF',
-  },
-  permissionTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  permissionDesc: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
-  },
+  loadingContainer: { flex: 1, backgroundColor: Colors.navy },
+  permissionContainer: { flex: 1, backgroundColor: Colors.white },
+  permissionContent: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  permissionIconBox: { marginBottom: 24, alignItems: 'center', justifyContent: 'center', width: 96, height: 96, borderRadius: 28, backgroundColor: '#EEF2FF' },
+  permissionTitle: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center', marginBottom: 12 },
+  permissionDesc: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
   permissionBtn: {},
-  cameraContainer: {
-    flex: 1,
-  },
-  cameraOverlay: {
-    justifyContent: 'space-between',
-  },
-  cameraHeader: {
-    backgroundColor: 'rgba(4,30,66,0.8)',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  cameraTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.white,
-  },
-  cameraSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 4,
-  },
-  guideContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  guideFrame: {
-    width: 300,
-    height: 180,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  corner: {
-    position: 'absolute',
-    width: CORNER_SIZE,
-    height: CORNER_SIZE,
-    borderColor: Colors.orange,
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: CORNER_THICKNESS,
-    borderLeftWidth: CORNER_THICKNESS,
-    borderTopLeftRadius: 4,
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: CORNER_THICKNESS,
-    borderRightWidth: CORNER_THICKNESS,
-    borderTopRightRadius: 4,
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: CORNER_THICKNESS,
-    borderLeftWidth: CORNER_THICKNESS,
-    borderBottomLeftRadius: 4,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: CORNER_THICKNESS,
-    borderRightWidth: CORNER_THICKNESS,
-    borderBottomRightRadius: 4,
-  },
-  guideText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 13,
-    fontWeight: '500',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  captureArea: {
-    backgroundColor: 'rgba(4,30,66,0.8)',
-    paddingVertical: 32,
-    alignItems: 'center',
-  },
-  captureTipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 20,
-  },
-  captureTip: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
-  },
-  captureBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.orange,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.5)',
-    shadowColor: Colors.orange,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  captureBtnInner: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.white,
-    opacity: 0.2,
-  },
-  processingContainer: {
-    flex: 1,
-    backgroundColor: Colors.navy,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  processingTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.white,
-    marginTop: 24,
-  },
-  processingSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
-    marginTop: 8,
-  },
-  processingDots: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 24,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  dotActive: {
-    backgroundColor: Colors.orange,
-  },
-  resultContainer: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-  },
-  resultContent: {
-    flex: 1,
-    padding: 20,
-  },
-  resultHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  successBadge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#DCFCE7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  resultTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: 6,
-  },
-  resultSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  boletaCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  boletaHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  boletaGrifo: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    flex: 1,
-  },
-  boletaFecha: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginLeft: 8,
-  },
-  boletaDivider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginBottom: 16,
-  },
-  boletaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  boletaLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  boletaValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  boletaValueBig: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  puntosCard: {
-    backgroundColor: '#FFF3E0',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#FFE0B2',
-  },
-  puntosLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  puntosValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.orange,
-  },
-  resultActions: {
-    gap: 12,
-  },
-  confirmBtn: {
-    marginBottom: 0,
-  },
+  cameraContainer: { flex: 1 },
+  cameraOverlay: { justifyContent: 'space-between' },
+  cameraHeader: { backgroundColor: 'rgba(4,30,66,0.8)', paddingHorizontal: 24, paddingVertical: 20, alignItems: 'center' },
+  cameraTitle: { fontSize: 18, fontWeight: '700', color: Colors.white },
+  cameraSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
+  guideContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  guideFrame: { width: 300, height: 180, alignItems: 'center', justifyContent: 'center' },
+  corner: { position: 'absolute', width: CORNER_SIZE, height: CORNER_SIZE, borderColor: Colors.orange },
+  cornerTL: { top: 0, left: 0, borderTopWidth: CORNER_THICKNESS, borderLeftWidth: CORNER_THICKNESS, borderTopLeftRadius: 4 },
+  cornerTR: { top: 0, right: 0, borderTopWidth: CORNER_THICKNESS, borderRightWidth: CORNER_THICKNESS, borderTopRightRadius: 4 },
+  cornerBL: { bottom: 0, left: 0, borderBottomWidth: CORNER_THICKNESS, borderLeftWidth: CORNER_THICKNESS, borderBottomLeftRadius: 4 },
+  cornerBR: { bottom: 0, right: 0, borderBottomWidth: CORNER_THICKNESS, borderRightWidth: CORNER_THICKNESS, borderBottomRightRadius: 4 },
+  guideText: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '500', backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  captureArea: { backgroundColor: 'rgba(4,30,66,0.8)', paddingVertical: 32, alignItems: 'center' },
+  captureTipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
+  captureTip: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+  captureBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.orange, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: 'rgba(255,255,255,0.5)', shadowColor: Colors.orange, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 },
+  captureBtnInner: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.white, opacity: 0.2 },
+  processingContainer: { flex: 1, backgroundColor: Colors.navy, alignItems: 'center', justifyContent: 'center' },
+  processingTitle: { fontSize: 22, fontWeight: '700', color: Colors.white, marginTop: 24 },
+  processingSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.6)', marginTop: 8 },
+  processingDots: { flexDirection: 'row', gap: 8, marginTop: 24 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.3)' },
+  dotActive: { backgroundColor: Colors.orange },
+  resultContainer: { flex: 1, backgroundColor: Colors.surface },
+  resultContent: { flex: 1, padding: 20 },
+  resultHeader: { alignItems: 'center', marginBottom: 24 },
+  successBadge: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  resultTitle: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
+  resultSubtitle: { fontSize: 14, color: Colors.textSecondary },
+  boletaCard: { backgroundColor: Colors.white, borderRadius: 20, padding: 20, borderWidth: 1.5, borderColor: Colors.border, marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
+  boletaHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  boletaGrifo: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, flex: 1 },
+  boletaFecha: { fontSize: 13, color: Colors.textSecondary, marginLeft: 8 },
+  boletaDivider: { height: 1, backgroundColor: Colors.border, marginBottom: 16 },
+  boletaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  boletaLabel: { fontSize: 14, color: Colors.textSecondary },
+  boletaValue: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+  boletaValueBig: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  puntosCard: { backgroundColor: '#FFF3E0', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: '#FFE0B2' },
+  puntosLabel: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+  puntosValue: { fontSize: 22, fontWeight: '800', color: Colors.orange },
+  resultActions: { gap: 12 },
+  confirmBtn: { marginBottom: 0 },
 })
