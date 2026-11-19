@@ -4,15 +4,21 @@ const path = require('path');
 const config = getDefaultConfig(__dirname);
 
 // Forzar bundles CJS de @firebase/* para que todos compartan
-// el mismo registro de componentes y no haya instancias duplicadas
-// (el problema de "Component auth has not been registered yet")
+// el mismo registro de componentes y no haya instancias duplicadas.
+// Solo los paquetes sin campo "react-native" en su package.json —
+// esos son los que Metro resolvería al bundle browser/ESM por defecto.
+//
+// @firebase/firestore ya tiene "react-native": "dist/index.rn.js"
+// → Metro lo resuelve correctamente, no lo forzamos.
+//
+// @firebase/auth ya tiene "react-native": "dist/rn/index.js"
+// → Lo forzamos de todas formas para garantizar que sea ese y no otro.
 const FIREBASE_CJS_MAP = {
   '@firebase/app':       path.resolve(__dirname, 'node_modules/@firebase/app/dist/index.cjs.js'),
   '@firebase/component': path.resolve(__dirname, 'node_modules/@firebase/component/dist/index.cjs.js'),
   '@firebase/util':      path.resolve(__dirname, 'node_modules/@firebase/util/dist/index.node.cjs.js'),
   '@firebase/logger':    path.resolve(__dirname, 'node_modules/@firebase/logger/dist/index.cjs.js'),
   '@firebase/auth':      path.resolve(__dirname, 'node_modules/@firebase/auth/dist/rn/index.js'),
-  '@firebase/firestore': path.resolve(__dirname, 'node_modules/@firebase/firestore/dist/index.node.cjs.js'),
 };
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
