@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native'
-import MapView, { Region } from 'react-native-maps'
+import MapView, { Region, UrlTile } from 'react-native-maps'
 import Svg, { Path, Circle } from 'react-native-svg'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Location from 'expo-location'
@@ -57,7 +57,7 @@ export default function MapaScreen() {
       if (status === 'granted') {
         setLocationReady(true)
       }
-      // Cargar grifos reales desde Google Places (con cache en Firestore)
+      // Cargar grifos reales desde Overpass API (con cache en Firestore)
       try {
         let ubicacion = { latitude: -12.0464, longitude: -77.0428 }
         if (status === 'granted') {
@@ -68,7 +68,7 @@ export default function MapaScreen() {
         setGrifos(data)
       } catch (err) {
         console.error('Error cargando grifos:', err)
-        // Fallback a Firestore si Places falla
+        // Fallback a Firestore si Overpass falla
         try {
           const data = await FirestoreService.getGrifos()
           setGrifos(data)
@@ -155,7 +155,16 @@ export default function MapaScreen() {
           showsMyLocationButton={false}
           showsCompass={false}
           showsScale={false}
+          // Sin provider: acepta UrlTile en ambas plataformas (iOS y Android)
         >
+          {/* Tiles de OpenStreetMap — gratis, sin API key */}
+          <UrlTile
+            urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maximumZ={19}
+            flipY={false}
+            tileSize={256}
+          />
+
           {filteredGrifos.map(grifo => (
             <GrifoMarker
               key={grifo.id}
@@ -252,10 +261,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 10,
-  },
   searchInput: {
     flex: 1,
     fontSize: 15,
@@ -302,9 +307,6 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderWidth: 1,
     borderColor: Colors.border,
-  },
-  recenterIcon: {
-    fontSize: 22,
   },
   loadingOverlay: {
     position: 'absolute',
