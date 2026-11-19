@@ -19,9 +19,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.repsolperu.repsolgo",
       "infoPlist": {
-        "NSCameraUsageDescription": "Necesitamos acceso a la c\u00e1mara para escanear tus boletas.",
-        "NSPhotoLibraryUsageDescription": "Necesitamos acceso a tu galer\u00eda para adjuntar boletas.",
-        "NSLocationWhenInUseUsageDescription": "Usamos tu ubicaci\u00f3n para encontrar grifos Repsol cercanos."
+        "NSCameraUsageDescription": "Necesitamos acceso a la cámara para escanear tus boletas.",
+        "NSPhotoLibraryUsageDescription": "Necesitamos acceso a tu galería para adjuntar boletas.",
+        "NSLocationWhenInUseUsageDescription": "Usamos tu ubicación para encontrar grifos Repsol cercanos."
       }
     },
     "android": {
@@ -49,16 +49,22 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Permitir el acceso a la c\u00e1mara para escanear boletas."
+          "cameraPermission": "Permitir el acceso a la cámara para escanear boletas."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Permitir el acceso a la ubicaci\u00f3n para encontrar grifos cercanos."
+          "locationWhenInUsePermission": "Permitir el acceso a la ubicación para encontrar grifos cercanos."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "react-native-maps",
+        {
+          "enableGoogleMaps": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

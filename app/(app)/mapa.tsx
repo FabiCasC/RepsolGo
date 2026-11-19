@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native'
-import MapView, { Region, UrlTile } from 'react-native-maps'
+import MapView, { Region, UrlTile, PROVIDER_DEFAULT } from 'react-native-maps'
 import Svg, { Path, Circle } from 'react-native-svg'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Location from 'expo-location'
@@ -150,12 +150,12 @@ export default function MapaScreen() {
         <MapView
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
+          provider={PROVIDER_DEFAULT}
           initialRegion={Config.LIMA_CENTER as Region}
           showsUserLocation={locationReady}
           showsMyLocationButton={false}
           showsCompass={false}
           showsScale={false}
-          // Sin provider: acepta UrlTile en ambas plataformas (iOS y Android)
         >
           {/* Tiles de OpenStreetMap — gratis, sin API key */}
           <UrlTile
