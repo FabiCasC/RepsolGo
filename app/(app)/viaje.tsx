@@ -1,221 +1,241 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import * as Location from 'expo-location'
-import { Colors } from '../../src/constants/colors'
-import { Button } from '../../src/components/ui/Button'
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, TextInput,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path, Circle, Line } from 'react-native-svg';
+import { Colors } from '@/src/constants/colors';
 
-interface GrifoRuta {
-  id: string
-  nombre: string
-  direccion: string
-  distancia: number
-  precio90: number
-  tiempoEspera: string
-  latitude: number
-  longitude: number
+function IcoRuta({ color = Colors.orange, size = 28 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="5" cy="6" r="2" stroke={color} strokeWidth={1.8} />
+      <Circle cx="19" cy="18" r="2" stroke={color} strokeWidth={1.8} />
+      <Path d="M5 8v5a3 3 0 003 3h8" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Path d="M17 14l2 2-2 2" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
 }
 
-const GRIFOS_LIMA: GrifoRuta[] = [
-  { id: '1', nombre: 'Repsol Javier Prado Este', direccion: 'Av. Javier Prado Este 4200, San Borja', distancia: 0, precio90: 16.49, tiempoEspera: '5 min', latitude: -12.0864, longitude: -76.9969 },
-  { id: '2', nombre: 'Repsol La Marina', direccion: 'Av. La Marina 2100, San Miguel', distancia: 0, precio90: 16.52, tiempoEspera: '8 min', latitude: -12.0774, longitude: -77.0921 },
-  { id: '3', nombre: 'Repsol Benavides', direccion: 'Av. Benavides 1800, Miraflores', distancia: 0, precio90: 16.45, tiempoEspera: '3 min', latitude: -12.1328, longitude: -77.0054 },
-  { id: '4', nombre: 'Repsol Panamericana Norte', direccion: 'Panamericana Norte Km 12, Los Olivos', distancia: 0, precio90: 16.39, tiempoEspera: '12 min', latitude: -11.9823, longitude: -77.0789 },
-  { id: '5', nombre: 'Repsol Atocongo', direccion: 'Av. Atocongo 2451, San Juan de Miraflores', distancia: 0, precio90: 16.42, tiempoEspera: '6 min', latitude: -12.1700, longitude: -76.9800 },
-]
-
-function getDistanciaKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLon = (lon2 - lon1) * Math.PI / 180
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+function IcoGasPump({ color = Colors.orange, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 22V4a1 1 0 011-1h10a1 1 0 011 1v9" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Path d="M15 13h2a2 2 0 012 2v3a2 2 0 002 2" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Line x1="5" y1="6" x2="11" y2="6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Line x1="3" y1="22" x2="13" y2="22" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
 }
+
+function IcoClock({ color = Colors.textSecondary, size = 14 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={1.8} />
+      <Path d="M12 6v6l4 2" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+const GRIFOS_RUTA = [
+  { id: '1', nombre: 'Repsol Lurín Km 32', distancia: '32 km', tiempo: '28 min', precio90: 16.49, precio95: 18.29, espera: '~3 min', disponible: true },
+  { id: '2', nombre: 'Repsol Chincha Norte', distancia: '67 km', tiempo: '55 min', precio90: 16.29, precio95: 18.09, espera: '~10 min', disponible: true },
+  { id: '3', nombre: 'Repsol Ica Eje Central', distancia: '110 km', tiempo: '1h 28 min', precio90: 16.19, precio95: 17.99, espera: '~5 min', disponible: true },
+  { id: '4', nombre: 'Repsol Nasca Norte', distancia: '185 km', tiempo: '2h 15 min', precio90: 16.09, precio95: 17.89, espera: '~2 min', disponible: false },
+];
 
 export default function ViajeScreen() {
-  const [destino, setDestino] = useState('')
-  const [grifos, setGrifos] = useState<GrifoRuta[]>([])
-  const [buscando, setBuscando] = useState(false)
-  const [buscado, setBuscado] = useState(false)
+  const [destino, setDestino] = useState('');
+  const [buscando, setBuscando] = useState(false);
+  const [mostrarGrifos, setMostrarGrifos] = useState(false);
 
-  async function handleBuscar() {
-    if (!destino.trim()) {
-      Alert.alert('Destino requerido', 'Ingresa tu destino para buscar grifos en ruta.')
-      return
-    }
-    setBuscando(true)
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync()
-      let userLat = -12.0464
-      let userLng = -77.0428
-
-      if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
-        userLat = loc.coords.latitude
-        userLng = loc.coords.longitude
-      }
-
-      const grifosConDistancia = GRIFOS_LIMA.map(g => ({
-        ...g,
-        distancia: parseFloat(getDistanciaKm(userLat, userLng, g.latitude, g.longitude).toFixed(1)),
-      })).sort((a, b) => a.distancia - b.distancia)
-
-      setGrifos(grifosConDistancia)
-      setBuscado(true)
-    } catch (err) {
-      Alert.alert('Error', 'No se pudo obtener la ubicación.')
-    } finally {
-      setBuscando(false)
-    }
+  function handleBuscar() {
+    if (!destino.trim()) return;
+    setBuscando(true);
+    setTimeout(() => {
+      setBuscando(false);
+      setMostrarGrifos(true);
+    }, 1200);
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerLabel}>Planifica tu ruta</Text>
-        <Text style={styles.headerTitle}>Modo Viaje 🚗</Text>
-      </View>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.searchSection}>
-          <Text style={styles.inputLabel}>¿A dónde vas?</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <IcoRuta size={28} />
+          <Text style={styles.title}>Modo Viaje</Text>
+        </View>
+        <Text style={styles.subtitle}>
+          Ingresa tu destino y te mostramos todos los grifos Repsol en ruta con precios y disponibilidad.
+        </Text>
+
+        {/* Buscador */}
+        <View style={styles.searchBox}>
           <TextInput
-            style={styles.destinoInput}
+            style={styles.input}
+            placeholder="¿A dónde vas? (ej: Ica, Nasca, Arequipa)"
+            placeholderTextColor={Colors.textMuted}
             value={destino}
             onChangeText={setDestino}
-            placeholder="Ej: Aeropuerto Jorge Chávez, Lima"
-            placeholderTextColor={Colors.textMuted}
-            returnKeyType="search"
             onSubmitEditing={handleBuscar}
+            returnKeyType="search"
           />
-          <Button
-            label={buscando ? 'Buscando...' : '🗺️  Buscar grifos en ruta'}
+          <TouchableOpacity
+            style={[styles.btnBuscar, !destino.trim() && styles.btnDisabled]}
             onPress={handleBuscar}
-            fullWidth
-            style={styles.searchBtn}
-          />
+            disabled={!destino.trim()}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.btnText}>{buscando ? 'Buscando...' : 'Buscar ruta'}</Text>
+          </TouchableOpacity>
         </View>
 
-        {buscando && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.orange} />
-            <Text style={styles.loadingText}>Calculando ruta...</Text>
-          </View>
-        )}
+        {/* Resultados */}
+        {mostrarGrifos && (
+          <>
+            <View style={styles.resultHeader}>
+              <Text style={styles.resultTitle}>
+                {GRIFOS_RUTA.length} grifos Repsol en ruta a {destino}
+              </Text>
+            </View>
 
-        {buscado && !buscando && (
-          <View style={styles.resultSection}>
-            <Text style={styles.resultTitle}>
-              Grifos Repsol cerca de tu ruta
-            </Text>
-            <Text style={styles.resultSub}>Ordenados por distancia desde tu ubicación</Text>
-            {grifos.map((g, idx) => (
-              <View key={g.id} style={[styles.grifoCard, idx === 0 && styles.grifoCardTop]}>
-                {idx === 0 && (
-                  <View style={styles.recomBadge}>
-                    <Text style={styles.recomText}>⭐ Más cercano</Text>
-                  </View>
-                )}
-                <View style={styles.grifoHeader}>
-                  <View style={styles.grifoIconBox}>
-                    <Text style={styles.grifoIconText}>⛽</Text>
+            {GRIFOS_RUTA.map(grifo => (
+              <View key={grifo.id} style={[styles.grifoCard, !grifo.disponible && styles.grifoCardOff]}>
+                <View style={styles.grifoTop}>
+                  <View style={styles.grifoIconWrap}>
+                    <IcoGasPump color={grifo.disponible ? Colors.orange : Colors.textMuted} size={20} />
                   </View>
                   <View style={styles.grifoInfo}>
-                    <Text style={styles.grifoNombre}>{g.nombre}</Text>
-                    <Text style={styles.grifoDireccion} numberOfLines={1}>{g.direccion}</Text>
+                    <Text style={[styles.grifoNombre, !grifo.disponible && styles.textOff]}>
+                      {grifo.nombre}
+                    </Text>
+                    <View style={styles.grifoMeta}>
+                      <Text style={styles.grifoDistancia}>{grifo.distancia}</Text>
+                      <Text style={styles.sep}>·</Text>
+                      <IcoClock />
+                      <Text style={styles.grifoTiempo}> {grifo.tiempo}</Text>
+                    </View>
                   </View>
+                  {!grifo.disponible && (
+                    <View style={styles.cerradoBadge}>
+                      <Text style={styles.cerradoText}>Cerrado</Text>
+                    </View>
+                  )}
                 </View>
-                <View style={styles.grifoStats}>
-                  <View style={styles.stat}>
-                    <Text style={styles.statValue}>{g.distancia} km</Text>
-                    <Text style={styles.statLabel}>Distancia</Text>
+
+                {grifo.disponible && (
+                  <View style={styles.grifoBottom}>
+                    <View style={styles.precioChip}>
+                      <Text style={styles.precioLabel}>90 oct</Text>
+                      <Text style={styles.precioValor}>S/ {grifo.precio90.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.precioChip}>
+                      <Text style={styles.precioLabel}>95 oct</Text>
+                      <Text style={styles.precioValor}>S/ {grifo.precio95.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.esperaChip}>
+                      <IcoClock color={Colors.green} size={12} />
+                      <Text style={styles.esperaText}> {grifo.espera}</Text>
+                    </View>
                   </View>
-                  <View style={styles.statDivider} />
-                  <View style={styles.stat}>
-                    <Text style={styles.statValue}>S/ {g.precio90.toFixed(2)}</Text>
-                    <Text style={styles.statLabel}>90 oct/gal</Text>
-                  </View>
-                  <View style={styles.statDivider} />
-                  <View style={styles.stat}>
-                    <Text style={styles.statValue}>{g.tiempoEspera}</Text>
-                    <Text style={styles.statLabel}>Espera</Text>
-                  </View>
-                </View>
+                )}
               </View>
             ))}
-          </View>
+          </>
         )}
 
-        {!buscado && !buscando && (
+        {/* Placeholder vacío */}
+        {!mostrarGrifos && !buscando && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🗺️</Text>
-            <Text style={styles.emptyTitle}>Encuentra grifos en tu camino</Text>
-            <Text style={styles.emptyDesc}>
-              Ingresa tu destino y te mostraremos los grifos Repsol más cercanos a tu ruta, con precios y tiempos de espera.
+            <IcoRuta color={Colors.textMuted} size={48} />
+            <Text style={styles.emptyTitle}>Planifica tu viaje</Text>
+            <Text style={styles.emptyText}>
+              Ingresa tu destino arriba para ver los grifos Repsol disponibles en la ruta con precios actualizados.
             </Text>
           </View>
         )}
+
       </ScrollView>
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: Colors.surface },
-  header: { backgroundColor: Colors.navy, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },
-  headerLabel: { fontSize: 12, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: Colors.white },
+  safe: { flex: 1, backgroundColor: Colors.surface },
   scroll: { flex: 1 },
-  searchSection: { padding: 20 },
-  inputLabel: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 10 },
-  destinoInput: {
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 14, fontSize: 15,
-    color: Colors.textPrimary, backgroundColor: Colors.white, marginBottom: 12,
+  content: { padding: 16, paddingBottom: 32 },
+
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  title: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
+  subtitle: { fontSize: 13, color: Colors.textSecondary, marginBottom: 20, lineHeight: 18 },
+
+  searchBox: { gap: 10, marginBottom: 20 },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: Colors.textPrimary,
   },
-  searchBtn: {},
-  loadingContainer: { alignItems: 'center', paddingVertical: 40 },
-  loadingText: { fontSize: 15, color: Colors.textSecondary, marginTop: 16 },
-  resultSection: { paddingHorizontal: 16, paddingBottom: 32 },
-  resultTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
-  resultSub: { fontSize: 13, color: Colors.textSecondary, marginBottom: 16 },
+  btnBuscar: {
+    backgroundColor: Colors.orange,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  btnDisabled: { opacity: 0.4 },
+  btnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+
+  resultHeader: { marginBottom: 12 },
+  resultTitle: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+
   grifoCard: {
-    backgroundColor: Colors.white, borderRadius: 16,
-    padding: 16, marginBottom: 12,
-    borderWidth: 1.5, borderColor: Colors.border,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    padding: 14,
+    marginBottom: 10,
   },
-  grifoCardTop: { borderColor: Colors.orange, borderWidth: 2 },
-  recomBadge: {
-    backgroundColor: '#FFF3E0', borderRadius: 20, paddingHorizontal: 12,
-    paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 10,
+  grifoCardOff: { opacity: 0.5 },
+  grifoTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
+  grifoIconWrap: {
+    width: 40, height: 40, borderRadius: 10,
+    backgroundColor: '#FFF3E0',
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 10,
   },
-  recomText: { fontSize: 12, fontWeight: '600', color: Colors.orange },
-  grifoHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  grifoIconBox: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: '#FFF3E0', alignItems: 'center', justifyContent: 'center', marginRight: 12,
-  },
-  grifoIconText: { fontSize: 22 },
   grifoInfo: { flex: 1 },
-  grifoNombre: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2 },
-  grifoDireccion: { fontSize: 12, color: Colors.textSecondary },
-  grifoStats: { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: 10, padding: 12 },
-  stat: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 16, fontWeight: '700', color: Colors.navy },
-  statLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
-  statDivider: { width: 1, backgroundColor: Colors.border },
-  emptyState: { alignItems: 'center', paddingHorizontal: 32, paddingTop: 40 },
-  emptyIcon: { fontSize: 72, marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginBottom: 10, textAlign: 'center' },
-  emptyDesc: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-})
+  grifoNombre: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 3 },
+  textOff: { color: Colors.textMuted },
+  grifoMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  grifoDistancia: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
+  sep: { color: Colors.textMuted },
+  grifoTiempo: { fontSize: 12, color: Colors.textSecondary },
+  cerradoBadge: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  cerradoText: { fontSize: 11, color: '#DC2626', fontWeight: '600' },
+
+  grifoBottom: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  precioChip: {
+    backgroundColor: Colors.surface,
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5,
+    flexDirection: 'row', gap: 4,
+  },
+  precioLabel: { fontSize: 11, color: Colors.textSecondary },
+  precioValor: { fontSize: 11, fontWeight: '700', color: Colors.textPrimary },
+  esperaChip: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#F0FDF4', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
+  },
+  esperaText: { fontSize: 11, color: Colors.green, fontWeight: '600' },
+
+  emptyState: { alignItems: 'center', marginTop: 60, gap: 12 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  emptyText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 18, maxWidth: 280 },
+});

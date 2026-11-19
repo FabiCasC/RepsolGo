@@ -1,5 +1,6 @@
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
+import Svg, { Path, Circle, Polyline, Line } from 'react-native-svg'
 import { Colors } from '../../constants/colors'
 import type { Reto } from '../../types'
 
@@ -7,11 +8,45 @@ interface RetoCardProps {
   reto: Reto
 }
 
-const ICONS: Record<string, string> = {
-  '⚡': '⚡',
-  '🌅': '🌅',
-  '🗺️': '🗺️',
-  default: '🏆',
+function RetoIcon({ icono, color, size = 22 }: { icono: string; color: string; size?: number }) {
+  switch (icono) {
+    case 'zap':
+    case '⚡':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Polyline points="13,2 3,14 12,14 11,22 21,10 12,10 13,2" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+        </Svg>
+      )
+    case 'sunrise':
+    case '🌅':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path d="M17 18a5 5 0 00-10 0" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+          <Line x1="12" y1="2" x2="12" y2="9" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+          <Line x1="4.22" y1="10.22" x2="5.64" y2="11.64" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+          <Line x1="1" y1="18" x2="3" y2="18" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+          <Line x1="21" y1="18" x2="23" y2="18" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+          <Line x1="18.36" y1="11.64" x2="19.78" y2="10.22" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+          <Line x1="23" y1="22" x2="1" y2="22" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+          <Polyline points="8,6 12,2 16,6" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+        </Svg>
+      )
+    case 'map':
+    case '🗺️':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path d="M9 3L3 6v15l6-3 6 3 6-3V3l-6 3-6-3z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+          <Line x1="9" y1="3" x2="9" y2="18" stroke={color} strokeWidth={1.8} />
+          <Line x1="15" y1="6" x2="15" y2="21" stroke={color} strokeWidth={1.8} />
+        </Svg>
+      )
+    default:
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+        </Svg>
+      )
+  }
 }
 
 export function RetoCard({ reto }: RetoCardProps) {
@@ -22,7 +57,7 @@ export function RetoCard({ reto }: RetoCardProps) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={[styles.iconContainer, { backgroundColor: reto.color + '22' }]}>
-          <Text style={styles.icon}>{reto.icono}</Text>
+          <RetoIcon icono={reto.icono} color={reto.color} size={22} />
         </View>
         <View style={styles.titleSection}>
           <Text style={styles.titulo}>{reto.titulo}</Text>
@@ -93,9 +128,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-  },
-  icon: {
-    fontSize: 22,
   },
   titleSection: {
     flex: 1,

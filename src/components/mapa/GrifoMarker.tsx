@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
 import { Marker } from 'react-native-maps'
 import { Colors } from '../../constants/colors'
 import type { Grifo } from '../../types'
@@ -16,59 +16,58 @@ export function GrifoMarker({ grifo, onPress, selected = false }: GrifoMarkerPro
       coordinate={{ latitude: grifo.latitude, longitude: grifo.longitude }}
       onPress={() => onPress(grifo)}
       title={grifo.nombre}
+      tracksViewChanges={false}
     >
-      <View style={[styles.markerContainer, selected && styles.markerSelected]}>
-        <View style={[styles.marker, selected && styles.markerSelectedBg]}>
-          <View style={styles.pinInner} />
+      <View style={styles.wrapper}>
+        <View style={[styles.pin, selected && styles.pinSelected]}>
+          <Text style={styles.pinIcon}>⛽</Text>
         </View>
-        <View style={[styles.markerTail, selected && styles.markerTailSelected]} />
+        <View style={[styles.tail, selected && styles.tailSelected]} />
       </View>
     </Marker>
   )
 }
 
 const styles = StyleSheet.create({
-  markerContainer: {
+  wrapper: {
     alignItems: 'center',
   },
-  markerSelected: {},
-  marker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  pin: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: Colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowRadius: 5,
+    elevation: 6,
+    borderWidth: 2.5,
+    borderColor: '#fff',
   },
-  markerSelectedBg: {
+  pinSelected: {
     backgroundColor: Colors.red,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
-  pinInner: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+  pinIcon: {
+    fontSize: 20,
   },
-  markerTail: {
+  tail: {
     width: 0,
     height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 8,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 10,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: Colors.orange,
     marginTop: -2,
   },
-  markerTailSelected: {
+  tailSelected: {
     borderTopColor: Colors.red,
   },
 })

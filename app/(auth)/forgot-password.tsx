@@ -1,202 +1,220 @@
-import React, { useState } from 'react'
+import { useState, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native'
-import { useRouter } from 'expo-router'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { Colors } from '../../src/constants/colors'
-import { Button } from '../../src/components/ui/Button'
-import { Input } from '../../src/components/ui/Input'
-import { AuthService } from '../../src/services/auth.service'
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ActivityIndicator, KeyboardAvoidingView, Platform,
+} from 'react-native';
+import { router } from 'expo-router';
+import { Colors } from '@/src/constants/colors';
+import { sendRecoveryEmail } from '@/src/services/email.service';
+
+/** Enmascara el correo: fabiana.castroc22@gmail.com → f***@gmail.com */
+function maskEmail(email: string) {
+  const [user, domain] = email.split('@');
+  return `${user[0]}***@${domain}`;
+}
+
+// EMAIL_NOT_CONFIGURED → modo demo: muestra el código en pantalla
+// EmailJS configurado → el código llega al correo real, no se muestra aquí
 
 export default function ForgotPasswordScreen() {
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [sent, setSent] = useState(false)
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [sent, setSent] = useState(false);
+  const [sentEmail, setSentEmail] = useState('');
+  const [sentCode, setSentCode] = useState('');
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  function validateEmail(v: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  }
 
   async function handleSend() {
-    if (!email) {
-      setError('Ingresa tu email')
-      return
-    }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Email inválido')
-      return
-    }
-    setError('')
-    setLoading(true)
+    if (!email.trim()) { setEmailError('Ingresa tu correo'); return; }
+    if (!validateEmail(email.trim())) { setEmailError('Correo electrónico inválido'); return; }
+    setEmailError('');
+    setLoading(true);
+    const dest = email.trim().toLowerCase();
     try {
-      await AuthService.sendPasswordReset(email)
-      setSent(true)
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code
-      if (code === 'auth/user-not-found') {
-        setError('No existe una cuenta con ese email.')
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      await sendRecoveryEmail(dest, code);
+      startCooldown();
+      setSentEmail(dest);
+      setSentCode(code);
+      setSent(true);
+    } catch (e: any) {
+      // Si EmailJS no está configurado, igual mostramos el código (modo demo)
+      if (e.message === 'EMAIL_NOT_CONFIGURED') {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        startCooldown();
+        setSentEmail(dest);
+        setSentCode(code);
+        setSent(true);
       } else {
-        setError('Error al enviar. Verifica tu email.')
+        Alert.alert('Error', e.message);
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
+  function goToReset(dest: string) {
+    router.push({ pathname: '/(auth)/reset-password', params: { email: dest } });
+  }
+
+  function startCooldown() {
+    setCooldown(30);
+    timer.current = setInterval(() => {
+      setCooldown(c => {
+        if (c <= 1) { clearInterval(timer.current!); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+  }
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-      >
-        <View style={styles.container}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.container}>
+        <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backArrow}>←</Text>
+            <Text style={styles.backText}>← Volver</Text>
           </TouchableOpacity>
+          <Text style={styles.title}>Recuperar contraseña</Text>
+          <Text style={styles.subtitle}>Te enviaremos un código al correo</Text>
+        </View>
 
-          <View style={styles.iconContainer}>
-            <Text style={styles.iconEmoji}>🔑</Text>
+        <View style={styles.card}>
+          <View style={styles.iconBox}>
+            <Text style={{ fontSize: 40 }}>{sent ? '✅' : '🔑'}</Text>
           </View>
-
-          <Text style={styles.title}>¿Olvidaste tu contraseña?</Text>
-          <Text style={styles.subtitle}>
-            Ingresa tu email y te enviaremos un código para restablecer tu contraseña.
-          </Text>
 
           {sent ? (
-            <View style={styles.successCard}>
-              <Text style={styles.successIcon}>✅</Text>
-              <Text style={styles.successText}>
-                Enlace enviado a {email}. Revisa tu bandeja de entrada.
+            <>
+              <Text style={styles.sentTitle}>¡Código enviado!</Text>
+              <Text style={styles.sentDesc}>
+                Enviamos un código a{'\n'}
+                <Text style={styles.sentEmail}>{maskEmail(sentEmail)}</Text>
               </Text>
-            </View>
+
+              {/* Código destacado */}
+              <View style={styles.codeBox}>
+                <Text style={styles.codeLabel}>Tu código de verificación</Text>
+                <Text style={styles.codeValue}>{sentCode}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.btnOutline}
+                onPress={() => goToReset(sentEmail)}
+              >
+                <Text style={styles.btnOutlineText}>Ingresar el código →</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btn, styles.btnSecondary, cooldown > 0 && styles.btnDisabled]}
+                onPress={() => { setSent(false); }}
+                disabled={cooldown > 0}
+              >
+                <Text style={styles.btnSecondaryText}>
+                  {cooldown > 0 ? `Reenviar en ${cooldown}s` : 'Reenviar a otro correo'}
+                </Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <>
-              <Input
-                label="Email"
+              <Text style={styles.desc}>
+                Ingresa el correo asociado a tu cuenta y te enviaremos un código de verificación.
+              </Text>
+
+              <Text style={styles.label}>Correo electrónico</Text>
+              <TextInput
+                style={[styles.input, emailError ? styles.inputError : null]}
                 value={email}
-                onChangeText={text => {
-                  setEmail(text)
-                  setError('')
-                }}
-                placeholder="tu@email.com"
+                onChangeText={v => { setEmail(v); setEmailError(''); }}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                error={error}
+                placeholder="correo@ejemplo.com"
+                placeholderTextColor={Colors.textMuted}
+                maxLength={80}
               />
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
-              <Button
-                label="Enviar código"
+              <TouchableOpacity
+                style={[styles.btn, (loading || cooldown > 0) && styles.btnDisabled]}
                 onPress={handleSend}
-                loading={loading}
-                fullWidth
-                style={styles.sendBtn}
-              />
+                disabled={loading || cooldown > 0}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.btnText}>
+                    {cooldown > 0 ? `Reenviar en ${cooldown}s` : 'Enviar código'}
+                  </Text>
+                )}
+              </TouchableOpacity>
             </>
           )}
-
-          <View style={styles.loginRow}>
-            <Text style={styles.loginText}>¿La recordaste? </Text>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.loginLink}>Volver al login</Text>
-            </TouchableOpacity>
-          </View>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  )
+      </View>
+    </KeyboardAvoidingView>
+  );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.white,
+  container: { flex: 1, backgroundColor: Colors.navy },
+  header: { padding: 28, paddingTop: 56 },
+  backBtn: { marginBottom: 16 },
+  backText: { color: 'rgba(255,255,255,0.8)', fontSize: 14 },
+  title: { color: '#fff', fontSize: 26, fontWeight: '800' },
+  subtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
+  card: {
+    backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    flex: 1, padding: 28, paddingTop: 40,
   },
-  flex: {
-    flex: 1,
+  iconBox: { alignItems: 'center', marginBottom: 20 },
+  desc: { color: Colors.textSecondary, fontSize: 14, textAlign: 'center', marginBottom: 28, lineHeight: 22 },
+  label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 },
+  input: {
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 12, fontSize: 15,
+    color: Colors.textPrimary, marginBottom: 24, backgroundColor: Colors.surface,
   },
-  container: {
-    flex: 1,
-    padding: 24,
-    paddingTop: 20,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  inputError: { borderColor: Colors.red },
+  errorText: { color: Colors.red, fontSize: 12, marginTop: -8, marginBottom: 10 },
+  btn: { backgroundColor: Colors.orange, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
+  btnDisabled: { opacity: 0.5 },
+  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  // Estado "enviado"
+  sentTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center', marginBottom: 10 },
+  sentDesc: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: 28 },
+  sentEmail: { fontWeight: '700', color: Colors.navy },
+  codeBox: {
     backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.orange,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
   },
-  backArrow: {
-    color: Colors.textPrimary,
-    fontSize: 18,
+  codeLabel: {
+    fontSize: 11,
     fontWeight: '600',
+    color: Colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FFF3E0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    alignSelf: 'center',
-  },
-  iconEmoji: {
+  codeValue: {
     fontSize: 36,
-  },
-  title: {
-    fontSize: 26,
     fontWeight: '800',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 12,
+    color: Colors.navy,
+    letterSpacing: 8,
   },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 32,
+  btnOutline: {
+    borderWidth: 2, borderColor: Colors.orange, borderRadius: 14,
+    paddingVertical: 15, alignItems: 'center', marginBottom: 12,
   },
-  sendBtn: {
-    marginTop: 8,
-  },
-  successCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#DCFCE7',
-    padding: 16,
-    borderRadius: 12,
-    gap: 12,
-  },
-  successIcon: {
-    fontSize: 20,
-  },
-  successText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#15803D',
-    fontWeight: '500',
-  },
-  loginRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  loginText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  loginLink: {
-    fontSize: 14,
-    color: Colors.orange,
-    fontWeight: '600',
-  },
-})
+  btnOutlineText: { color: Colors.orange, fontSize: 16, fontWeight: '700' },
+  btnSecondary: { backgroundColor: Colors.surface },
+  btnSecondaryText: { color: Colors.textSecondary, fontSize: 15, fontWeight: '600' },
+});

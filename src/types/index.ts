@@ -1,5 +1,6 @@
 export type UserRole = 'cliente' | 'operario'
 
+
 export type NivelFidelizacion = 'Bronce' | 'Plata' | 'Oro' | 'Platino' | 'Diamante'
 
 export interface User {
@@ -52,7 +53,6 @@ export interface Canje {
 
 export interface Reto {
   id: string
-  firestoreId?: string
   titulo: string
   descripcion: string
   progreso: number
