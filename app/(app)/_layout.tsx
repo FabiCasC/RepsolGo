@@ -126,17 +126,23 @@ export default function AppLayout() {
             tabBarIcon: ({ color }) => <UserIcon color={color} />,
           }}
         />
-        <Tabs.Screen name="gamificacion" options={{ href: null, tabBarButton: () => null }} />
-        <Tabs.Screen name="incidencias" options={{ href: null, tabBarButton: () => null }} />
-        <Tabs.Screen name="turno" options={{ href: null, tabBarButton: () => null }} />
-        <Tabs.Screen name="delivery" options={{ href: null, tabBarButton: () => null }} />
-        <Tabs.Screen name="ranking" options={{ href: null, tabBarButton: () => null }} />
-        <Tabs.Screen name="huella" options={{ href: null, tabBarButton: () => null }} />
-        <Tabs.Screen name="factura" options={{ href: null, tabBarButton: () => null }} />
-        <Tabs.Screen name="ocr-boleta" options={{ href: null, tabBarButton: () => null }} />
-        <Tabs.Screen name="ayuda" options={{ href: null, tabBarButton: () => null }} />
-        <Tabs.Screen name="terminos" options={{ href: null, tabBarButton: () => null }} />
-        <Tabs.Screen name="privacidad" options={{ href: null, tabBarButton: () => null }} />
+        <Tabs.Screen name="gamificacion" options={{ href: null }} />
+        <Tabs.Screen name="incidencias" options={{ href: null }} />
+        <Tabs.Screen name="turno" options={{ href: null }} />
+        <Tabs.Screen name="delivery" options={{ href: null }} />
+        <Tabs.Screen name="ranking" options={{ href: null }} />
+        <Tabs.Screen name="huella" options={{ href: null }} />
+        <Tabs.Screen name="factura" options={{ href: null }} />
+        <Tabs.Screen name="ocr-boleta" options={{ href: null }} />
+        <Tabs.Screen name="ayuda" options={{ href: null }} />
+        <Tabs.Screen name="terminos" options={{ href: null }} />
+        <Tabs.Screen name="privacidad" options={{ href: null }} />
+        <Tabs.Screen name="perfil/editar" options={{ href: null }} />
+        <Tabs.Screen name="perfil/cambiar-password" options={{ href: null }} />
+        <Tabs.Screen name="perfil/historial" options={{ href: null }} />
+        <Tabs.Screen name="perfil/mis-cargas" options={{ href: null }} />
+        <Tabs.Screen name="perfil/mis-favoritos" options={{ href: null }} />
+        <Tabs.Screen name="perfil/cuenta-grupal" options={{ href: null }} />
       </Tabs>
     </AuthGuard>
   )
