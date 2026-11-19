@@ -12,107 +12,39 @@ import MapView, { Region } from 'react-native-maps'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Location from 'expo-location'
 import { Colors } from '../../src/constants/colors'
+import { useAuthStore } from '../../src/store/auth.store'
 import { GrifoMarker } from '../../src/components/mapa/GrifoMarker'
 import { GrifoBottomSheet } from '../../src/components/mapa/GrifoBottomSheet'
 import { Config } from '../../src/constants/config'
+import { FirestoreService } from '../../src/services/firestore.service'
 import type { Grifo } from '../../src/types'
 
-const INITIAL_GRIFOS: Grifo[] = [
-  {
-    id: '1',
-    nombre: 'Repsol Javier Prado Este',
-    direccion: 'Av. Javier Prado Este 4200, La Molina',
-    latitude: -12.0839,
-    longitude: -76.9786,
-    precios: [
-      { tipo: '90 oct', precio: 16.49 },
-      { tipo: '95 oct', precio: 18.29 },
-      { tipo: 'Diesel B5', precio: 15.89 },
-    ],
-    tiempoEspera: '~5 min',
-    abierto24h: true,
-    distancia: '2.3 km',
-    esFavorito: true,
-  },
-  {
-    id: '2',
-    nombre: 'Repsol Benavides',
-    direccion: 'Av. Benavides 1244, Miraflores',
-    latitude: -12.1116,
-    longitude: -77.0086,
-    precios: [
-      { tipo: '90 oct', precio: 16.59 },
-      { tipo: '95 oct', precio: 18.39 },
-      { tipo: 'Diesel B5', precio: 15.99 },
-    ],
-    tiempoEspera: '~8 min',
-    abierto24h: true,
-    distancia: '3.7 km',
-    esFavorito: false,
-  },
-  {
-    id: '3',
-    nombre: 'Repsol Angamos',
-    direccion: 'Av. Angamos Oeste 890, Surquillo',
-    latitude: -12.1073,
-    longitude: -77.0256,
-    precios: [
-      { tipo: '90 oct', precio: 16.45 },
-      { tipo: '95 oct', precio: 18.25 },
-      { tipo: 'Diesel B5', precio: 15.79 },
-    ],
-    tiempoEspera: '~3 min',
-    abierto24h: false,
-    distancia: '4.1 km',
-    esFavorito: false,
-  },
-  {
-    id: '4',
-    nombre: 'Repsol La Marina',
-    direccion: 'Av. La Marina 2355, San Miguel',
-    latitude: -12.0850,
-    longitude: -77.0856,
-    precios: [
-      { tipo: '90 oct', precio: 16.42 },
-      { tipo: '95 oct', precio: 18.22 },
-      { tipo: 'Diesel B5', precio: 15.75 },
-    ],
-    tiempoEspera: '~12 min',
-    abierto24h: true,
-    distancia: '5.8 km',
-    esFavorito: false,
-  },
-  {
-    id: '5',
-    nombre: 'Repsol Panamericana Norte',
-    direccion: 'Panamericana Norte Km 12, Independencia',
-    latitude: -11.9847,
-    longitude: -77.0614,
-    precios: [
-      { tipo: '90 oct', precio: 16.39 },
-      { tipo: '95 oct', precio: 18.19 },
-      { tipo: 'Diesel B5', precio: 15.72 },
-    ],
-    tiempoEspera: '~6 min',
-    abierto24h: true,
-    distancia: '8.2 km',
-    esFavorito: false,
-  },
-]
-
 export default function MapaScreen() {
+  const user = useAuthStore(state => state.user)
   const mapRef = useRef<MapView>(null)
-  const [grifos, setGrifos] = useState<Grifo[]>(INITIAL_GRIFOS)
+  const [grifos, setGrifos] = useState<Grifo[]>([])
   const [selectedGrifo, setSelectedGrifo] = useState<Grifo | null>(null)
   const [searchText, setSearchText] = useState('')
   const [locationReady, setLocationReady] = useState(false)
   const [recentering, setRecentering] = useState(false)
+  const [loadingGrifos, setLoadingGrifos] = useState(true)
 
   useEffect(() => {
     (async () => {
+      // Pedir permisos de ubicación
       const { status } = await Location.requestForegroundPermissionsAsync()
       if (status === 'granted') {
         setLocationReady(true)
+      }
+      // Cargar grifos desde Firestore
+      try {
+        await FirestoreService.seedGrifosDemo()
+        const data = await FirestoreService.getGrifos()
+        setGrifos(data)
+      } catch (err) {
+        console.error('Error cargando grifos:', err)
+      } finally {
+        setLoadingGrifos(false)
       }
     })()
   }, [])
@@ -125,12 +57,31 @@ export default function MapaScreen() {
     setSelectedGrifo(null)
   }
 
-  function handleToggleFavorito(id: string) {
+  async function handleToggleFavorito(id: string) {
+    const grifo = grifos.find(g => g.id === id)
+    if (!grifo) return
+
+    // Toggle local inmediato
     setGrifos(prev =>
       prev.map(g => (g.id === id ? { ...g, esFavorito: !g.esFavorito } : g))
     )
     if (selectedGrifo?.id === id) {
       setSelectedGrifo(prev => prev ? { ...prev, esFavorito: !prev.esFavorito } : null)
+    }
+
+    // Persistir en Firestore si hay usuario
+    if (user?.uid) {
+      try {
+        await FirestoreService.toggleFavorito(user.uid, id, {
+          grifoId: id,
+          nombre: grifo.nombre,
+          direccion: grifo.direccion,
+          latitude: grifo.latitude,
+          longitude: grifo.longitude,
+        })
+      } catch (err) {
+        console.error('Error guardando favorito:', err)
+      }
     }
   }
 
@@ -204,6 +155,14 @@ export default function MapaScreen() {
           ) : null}
         </View>
       </SafeAreaView>
+
+      {/* Loading grifos */}
+      {loadingGrifos && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={Colors.navy} />
+          <Text style={styles.loadingText}>Cargando grifos...</Text>
+        </View>
+      )}
 
       {/* Contador */}
       <View style={styles.countBadge}>
@@ -316,5 +275,27 @@ const styles = StyleSheet.create({
   },
   recenterIcon: {
     fontSize: 22,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 100,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: Colors.navy,
+    fontWeight: '600',
   },
 })
