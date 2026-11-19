@@ -187,8 +187,17 @@ export default function PerfilScreen() {
           <MenuItem icon={<IcoEdit />} label="Editar perfil" onPress={() => router.push('/(app)/perfil/editar')} />
           <MenuItem icon={<IcoLock />} label="Cambiar contraseña" onPress={() => router.push('/(app)/perfil/cambiar-password')} />
           <MenuItem icon={<IcoTrophy />} label="Retos y gamificación" onPress={() => router.push('/(app)/retos')} />
-          <MenuItem icon={<IcoBox />} label="Mis cargas" onPress={() => Alert.alert('Próximamente')} last />
-          <MenuItem icon={<IcoHeart />} label="Mis favoritos" onPress={() => Alert.alert('Próximamente')} last />
+          <MenuItem icon={<IcoBox />} label="Mis cargas" onPress={() => router.push('/(app)/perfil/mis-cargas')} />
+          <MenuItem icon={<IcoHeart />} label="Mis favoritos" onPress={() => router.push('/(app)/perfil/mis-favoritos')} />
+          <MenuItem icon={<IcoFileText />} label="Historial inteligente" onPress={() => router.push('/(app)/perfil/historial')} />
+          <MenuItem icon={<IcoBox />} label="Cuenta grupal" onPress={() => router.push('/(app)/perfil/cuenta-grupal')} last />
+        </Section>
+
+        <Section title="Features exclusivos">
+          <MenuItem icon={<IcoFileText />} label="Comprobante electrónico" onPress={() => router.push('/(app)/factura')} />
+          <MenuItem icon={<IcoHeart />} label="Ranking de grifos" onPress={() => router.push('/(app)/ranking')} />
+          <MenuItem icon={<IcoTrophy />} label="Huella de carbono" onPress={() => router.push('/(app)/huella')} />
+          <MenuItem icon={<IcoBox />} label="Reclamar puntos (OCR)" onPress={() => router.push('/(app)/ocr-boleta')} last />
         </Section>
 
         <Section title="Seguridad">

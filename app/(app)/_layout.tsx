@@ -126,6 +126,14 @@ export default function AppLayout() {
             tabBarIcon: ({ color }) => <UserIcon color={color} />,
           }}
         />
+        <Tabs.Screen name="gamificacion" options={{ href: null }} />
+        <Tabs.Screen name="incidencias" options={{ href: null }} />
+        <Tabs.Screen name="turno" options={{ href: null }} />
+        <Tabs.Screen name="delivery" options={{ href: null }} />
+        <Tabs.Screen name="ranking" options={{ href: null }} />
+        <Tabs.Screen name="huella" options={{ href: null }} />
+        <Tabs.Screen name="factura" options={{ href: null }} />
+        <Tabs.Screen name="ocr-boleta" options={{ href: null }} />
       </Tabs>
     </AuthGuard>
   )
