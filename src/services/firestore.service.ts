@@ -49,7 +49,7 @@ const RETOS_DEFAULT: Omit<Reto, 'id'>[] = [
     xp: 100,
     fechaVencimiento: '31 oct',
     completado: false,
-    icono: '⚡',
+    icono: 'bolt',
     color: '#FF8200',
   },
   {
@@ -61,7 +61,7 @@ const RETOS_DEFAULT: Omit<Reto, 'id'>[] = [
     xp: 75,
     fechaVencimiento: '20 oct',
     completado: false,
-    icono: '🌅',
+    icono: 'sunrise',
     color: '#F59E0B',
   },
   {
@@ -73,7 +73,7 @@ const RETOS_DEFAULT: Omit<Reto, 'id'>[] = [
     xp: 80,
     fechaVencimiento: '31 oct',
     completado: false,
-    icono: '🗺️',
+    icono: 'map',
     color: '#3B82F6',
   },
 ]

@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Svg, { Path, Circle } from 'react-native-svg'
 import { Colors } from '../../src/constants/colors'
 import { Button } from '../../src/components/ui/Button'
 import { Input } from '../../src/components/ui/Input'
@@ -135,7 +136,7 @@ export default function RegisterScreen() {
                 onPress={() => setRol('cliente')}
                 activeOpacity={0.85}
               >
-                <Text style={styles.rolEmoji}>🚗</Text>
+                <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" style={styles.rolEmoji}><Path d="M5 17H3a2 2 0 01-2-2V9a7 7 0 017-7h8a7 7 0 017 7v6a2 2 0 01-2 2h-2M7 17h10" stroke={Colors.navy} strokeWidth={1.8} strokeLinecap="round"/><Circle cx="7.5" cy="17.5" r="2.5" stroke={Colors.navy} strokeWidth={1.8}/><Circle cx="16.5" cy="17.5" r="2.5" stroke={Colors.navy} strokeWidth={1.8}/></Svg>
                 <Text style={[styles.rolName, rol === 'cliente' && styles.rolNameActive]}>
                   Cliente
                 </Text>
@@ -147,7 +148,7 @@ export default function RegisterScreen() {
                 onPress={() => setRol('operario')}
                 activeOpacity={0.85}
               >
-                <Text style={styles.rolEmoji}>⛽</Text>
+                <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" style={styles.rolEmoji}><Path d="M3 22V4a1 1 0 011-1h10a1 1 0 011 1v9" stroke={Colors.navy} strokeWidth={1.8} strokeLinecap="round"/><Path d="M15 13h2a2 2 0 012 2v3a2 2 0 002 2" stroke={Colors.navy} strokeWidth={1.8} strokeLinecap="round"/><Path d="M5 6h6M3 22h10" stroke={Colors.navy} strokeWidth={1.8} strokeLinecap="round"/></Svg>
                 <Text style={[styles.rolName, rol === 'operario' && styles.rolNameActive]}>
                   Operario
                 </Text>

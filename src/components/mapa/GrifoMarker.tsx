@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { Marker } from 'react-native-maps'
+import Svg, { Path } from 'react-native-svg'
 import { Colors } from '../../constants/colors'
 import type { Grifo } from '../../types'
 
@@ -20,7 +21,11 @@ export function GrifoMarker({ grifo, onPress, selected = false }: GrifoMarkerPro
     >
       <View style={styles.wrapper}>
         <View style={[styles.pin, selected && styles.pinSelected]}>
-          <Text style={styles.pinIcon}>⛽</Text>
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Path d="M3 22V4a1 1 0 011-1h10a1 1 0 011 1v9" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
+            <Path d="M15 13h2a2 2 0 012 2v3a2 2 0 002 2" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
+            <Path d="M5 6h6M3 22h10" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
+          </Svg>
         </View>
         <View style={[styles.tail, selected && styles.tailSelected]} />
       </View>
@@ -53,9 +58,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
   },
-  pinIcon: {
-    fontSize: 20,
-  },
+
   tail: {
     width: 0,
     height: 0,

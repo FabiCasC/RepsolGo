@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Svg, { Path, Circle } from 'react-native-svg'
 import { Colors } from '../../../src/constants/colors'
 import { Button } from '../../../src/components/ui/Button'
 import { FirestoreService } from '../../../src/services/firestore.service'
@@ -140,13 +141,13 @@ export default function CuentaGrupalScreen() {
       <ScrollView keyboardShouldPersistTaps="handled">
         {!grupo && mode === 'view' && (
           <View style={styles.emptySection}>
-            <Text style={styles.emptyIcon}>👨‍👩‍👧‍👦</Text>
+            <Svg width={48} height={48} viewBox="0 0 24 24" fill="none" style={styles.emptyIcon}><Circle cx="9" cy="7" r="3" stroke={Colors.textMuted} strokeWidth={1.8}/><Path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke={Colors.textMuted} strokeWidth={1.8} strokeLinecap="round"/><Path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke={Colors.textMuted} strokeWidth={1.8} strokeLinecap="round"/></Svg>
             <Text style={styles.emptyTitle}>Sin cuenta grupal</Text>
             <Text style={styles.emptyDesc}>
               Crea una cuenta grupal o familiar para acumular puntos entre varios vehículos y canjearlos juntos.
             </Text>
             <Button
-              label="✨  Crear cuenta grupal"
+              label="Crear cuenta grupal"
               onPress={() => setMode('create')}
               fullWidth
               style={styles.createBtn}
@@ -173,14 +174,14 @@ export default function CuentaGrupalScreen() {
                 style={[styles.tipoBtn, tipoGrupo === 'familiar' && styles.tipoBtnActive]}
                 onPress={() => setTipoGrupo('familiar')}
               >
-                <Text style={styles.tipoIcon}>👨‍👩‍👧</Text>
+                <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" style={styles.tipoIcon}><Circle cx="9" cy="7" r="3" stroke={Colors.navy} strokeWidth={1.8}/><Path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke={Colors.navy} strokeWidth={1.8} strokeLinecap="round"/><Path d="M16 3.13a4 4 0 010 7.75" stroke={Colors.navy} strokeWidth={1.8} strokeLinecap="round"/></Svg>
                 <Text style={[styles.tipoLabel, tipoGrupo === 'familiar' && styles.tipoLabelActive]}>Familiar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.tipoBtn, tipoGrupo === 'empresa' && styles.tipoBtnActive]}
                 onPress={() => setTipoGrupo('empresa')}
               >
-                <Text style={styles.tipoIcon}>🏢</Text>
+                <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" style={styles.tipoIcon}><Rect x="2" y="3" width="20" height="18" rx="2" stroke={Colors.navy} strokeWidth={1.8}/><Path d="M8 21V10M16 21V10M12 21V10M2 10h20" stroke={Colors.navy} strokeWidth={1.8} strokeLinecap="round"/></Svg>
                 <Text style={[styles.tipoLabel, tipoGrupo === 'empresa' && styles.tipoLabelActive]}>Empresa</Text>
               </TouchableOpacity>
             </View>
@@ -206,7 +207,7 @@ export default function CuentaGrupalScreen() {
             <View style={styles.grupoCard}>
               <View style={styles.grupoHeaderRow}>
                 <View style={styles.grupoIconBox}>
-                  <Text style={styles.grupoIcon}>{grupo.tipo === 'familiar' ? '👨‍👩‍👧' : '🏢'}</Text>
+                  <Text style={styles.grupoIcon}>' '</Text>
                 </View>
                 <View style={styles.grupoInfo}>
                   <Text style={styles.grupoNombre}>{grupo.nombre}</Text>

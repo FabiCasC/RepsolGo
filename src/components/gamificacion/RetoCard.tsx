@@ -11,6 +11,7 @@ interface RetoCardProps {
 function RetoIcon({ icono, color, size = 22 }: { icono: string; color: string; size?: number }) {
   switch (icono) {
     case 'zap':
+    case 'bolt':
     case '⚡':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -18,6 +19,8 @@ function RetoIcon({ icono, color, size = 22 }: { icono: string; color: string; s
         </Svg>
       )
     case 'sunrise':
+    case 'sunrise':
+    case 'sun':
     case '🌅':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -31,6 +34,7 @@ function RetoIcon({ icono, color, size = 22 }: { icono: string; color: string; s
           <Polyline points="8,6 12,2 16,6" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
         </Svg>
       )
+    case 'map':
     case 'map':
     case '🗺️':
       return (

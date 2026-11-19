@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Svg, { Path } from 'react-native-svg'
 import { Colors } from '../../../src/constants/colors'
 import { useAuthStore } from '../../../src/store/auth.store'
 import { FirestoreService, CargaData } from '../../../src/services/firestore.service'
@@ -21,7 +22,7 @@ function CargaRow({ carga }: { carga: CargaItem }) {
     <View style={styles.row}>
       <View style={styles.rowLeft}>
         <View style={styles.iconContainer}>
-          <Text style={styles.icon}>⛽</Text>
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" style={styles.icon}><Path d="M3 22V4a1 1 0 011-1h10a1 1 0 011 1v9" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round"/><Path d="M15 13h2a2 2 0 012 2v3a2 2 0 002 2" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round"/><Path d="M5 6h6M3 22h10" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round"/></Svg>
         </View>
         <View>
           <Text style={styles.grifoName}>{carga.grifoNombre}</Text>
@@ -86,7 +87,7 @@ export default function MisCargasScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>⛽</Text>
+              <Svg width={40} height={40} viewBox="0 0 24 24" fill="none" style={styles.emptyIcon}><Path d="M3 22V4a1 1 0 011-1h10a1 1 0 011 1v9" stroke={Colors.textMuted} strokeWidth={1.8} strokeLinecap="round"/><Path d="M15 13h2a2 2 0 012 2v3a2 2 0 002 2" stroke={Colors.textMuted} strokeWidth={1.8} strokeLinecap="round"/><Path d="M5 6h6M3 22h10" stroke={Colors.textMuted} strokeWidth={1.8} strokeLinecap="round"/></Svg>
               <Text style={styles.emptyTitle}>Sin cargas aún</Text>
               <Text style={styles.emptyDesc}>Escanea tu primera boleta para empezar a ganar puntos.</Text>
             </View>

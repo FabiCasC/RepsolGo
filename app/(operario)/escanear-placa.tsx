@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import Svg, { Path, Circle, Rect } from 'react-native-svg'
 import { Colors } from '../../src/constants/colors'
 import { Button } from '../../src/components/ui/Button'
 import { FirestoreService } from '../../src/services/firestore.service'
@@ -42,7 +43,7 @@ export default function EscanearPlacaScreen() {
     return (
       <SafeAreaView style={styles.permContainer}>
         <View style={styles.permContent}>
-          <Text style={styles.permIcon}>📷</Text>
+          <Svg width={40} height={40} viewBox="0 0 24 24" fill="none" style={styles.permIcon}><Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke={Colors.orange} strokeWidth={1.8} strokeLinejoin="round"/><Circle cx="12" cy="13" r="4" stroke={Colors.orange} strokeWidth={1.8}/></Svg>
           <Text style={styles.permTitle}>Cámara necesaria</Text>
           <Text style={styles.permDesc}>Para escanear las placas de los vehículos.</Text>
           {permission.canAskAgain ? (
@@ -195,7 +196,7 @@ export default function EscanearPlacaScreen() {
           <Text style={styles.headerTitle}>Resultado</Text>
         </View>
         <View style={styles.resultContainer}>
-          <Text style={styles.notFoundIcon}>🚗❌</Text>
+          <Svg width={48} height={48} viewBox="0 0 24 24" fill="none" style={styles.notFoundIcon}><Path d="M5 17H3a2 2 0 01-2-2V9a7 7 0 017-7h8a7 7 0 017 7v6a2 2 0 01-2 2h-2M7 17h10M7.5 20.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM16.5 20.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="#EF4444" strokeWidth={1.8} strokeLinecap="round"/><Path d="M18 3L6 15" stroke="#EF4444" strokeWidth={2} strokeLinecap="round"/></Svg>
           <Text style={styles.notFoundTitle}>Placa no registrada</Text>
           <Text style={styles.notFoundDesc}>Esta placa no está registrada en RepsolGo.</Text>
           <Button label="Intentar de nuevo" onPress={() => setState('camera')} fullWidth style={styles.retryBtn} />

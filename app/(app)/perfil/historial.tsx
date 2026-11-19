@@ -8,6 +8,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import Svg, { Path, Circle } from 'react-native-svg'
 import { Colors } from '../../../src/constants/colors'
 import { useAuthStore } from '../../../src/store/auth.store'
 import { FirestoreService } from '../../../src/services/firestore.service'
@@ -98,7 +99,7 @@ export default function HistorialScreen() {
           {prediccion && (
             <View style={styles.predCard}>
               <View style={styles.predIconBox}>
-                <Text style={styles.predIcon}>🔮</Text>
+                <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" style={styles.predIcon}><Circle cx="12" cy="12" r="9" stroke="#8B5CF6" strokeWidth={1.8}/><Circle cx="12" cy="12" r="4" stroke="#8B5CF6" strokeWidth={1.8}/><Path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="#8B5CF6" strokeWidth={1.8} strokeLinecap="round"/></Svg>
               </View>
               <View style={styles.predContent}>
                 <Text style={styles.predLabel}>Próxima carga estimada</Text>
@@ -131,7 +132,7 @@ export default function HistorialScreen() {
             <Text style={styles.sectionTitle}>Todas tus cargas</Text>
             {cargas.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyIcon}>⛽</Text>
+                <Svg width={40} height={40} viewBox="0 0 24 24" fill="none" style={styles.emptyIcon}><Path d="M3 22V4a1 1 0 011-1h10a1 1 0 011 1v9" stroke={Colors.textMuted} strokeWidth={1.8} strokeLinecap="round"/><Path d="M15 13h2a2 2 0 012 2v3a2 2 0 002 2" stroke={Colors.textMuted} strokeWidth={1.8} strokeLinecap="round"/><Path d="M5 6h6M3 22h10" stroke={Colors.textMuted} strokeWidth={1.8} strokeLinecap="round"/></Svg>
                 <Text style={styles.emptyTitle}>Sin cargas aún</Text>
                 <Text style={styles.emptyDesc}>Cuando cargues combustible en Repsol, tu historial aparecerá aquí.</Text>
               </View>
@@ -139,7 +140,7 @@ export default function HistorialScreen() {
               cargas.map(c => (
                 <View key={c.id} style={styles.cargaCard}>
                   <View style={styles.cargaIconBox}>
-                    <Text style={styles.cargaIcon}>⛽</Text>
+                    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" style={styles.cargaIcon}><Path d="M3 22V4a1 1 0 011-1h10a1 1 0 011 1v9" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round"/><Path d="M15 13h2a2 2 0 012 2v3a2 2 0 002 2" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round"/><Path d="M5 6h6M3 22h10" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round"/></Svg>
                   </View>
                   <View style={styles.cargaInfo}>
                     <Text style={styles.cargaGrifo} numberOfLines={1}>{c.grifoNombre || 'Grifo Repsol'}</Text>

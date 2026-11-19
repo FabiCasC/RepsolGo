@@ -119,17 +119,17 @@ export default function FacturaScreen() {
           </>
         ) : generado ? (
           <View style={s.exito}>
-            <View style={s.exitoIco}><Text style={{ fontSize: 48 }}>✅</Text></View>
+            <View style={s.exitoIco}><Svg width={48} height={48} viewBox="0 0 24 24" fill="none"><Circle cx="12" cy="12" r="10" stroke={Colors.green} strokeWidth={2}/><Polyline points="9,12 11,14 15,10" stroke={Colors.green} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"/></Svg></View>
             <Text style={s.exitoTitulo}>¡Comprobante generado!</Text>
             <Text style={s.exitoNum}>{generado}</Text>
             <Text style={s.exitoDesc}>
               Se ha guardado en tu historial.{'\n'}Presentalo en el grifo si lo necesitas.
             </Text>
             <View style={s.exitoDetalle}>
-              <Text style={s.exitoDetalleRow}>📍 {cargaActual?.grifoNombre}</Text>
-              <Text style={s.exitoDetalleRow}>📅 {cargaActual?.fecha}</Text>
-              <Text style={s.exitoDetalleRow}>⛽ {cargaActual?.litros} · {cargaActual?.combustible}</Text>
-              <Text style={s.exitoDetalleRow}>💰 {cargaActual?.monto}</Text>
+              <Text style={s.exitoDetalleRow}>Grifo: {cargaActual?.grifoNombre}</Text>
+              <Text style={s.exitoDetalleRow}>Fecha: {cargaActual?.fecha}</Text>
+              <Text style={s.exitoDetalleRow}>Combustible: {cargaActual?.litros} · {cargaActual?.combustible}</Text>
+              <Text style={s.exitoDetalleRow}>Monto: {cargaActual?.monto}</Text>
             </View>
             <TouchableOpacity style={s.volverBtn} onPress={() => { setSeleccionada(null); setGenerado(null); }}>
               <Text style={s.volverBtnTxt}>Generar otro comprobante</Text>
@@ -153,10 +153,10 @@ export default function FacturaScreen() {
               <Text style={s.formTitulo}>Tipo de comprobante</Text>
               <View style={s.tipoRow}>
                 <TouchableOpacity style={[s.tipoBtn, tipoComp === 'boleta' && s.tipoBtnActivo]} onPress={() => setTipoComp('boleta')}>
-                  <Text style={[s.tipoTxt, tipoComp === 'boleta' && s.tipoTxtActivo]}>🧾 Boleta</Text>
+                  <Text style={[s.tipoTxt, tipoComp === 'boleta' && s.tipoTxtActivo]}>Boleta</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.tipoBtn, tipoComp === 'factura' && s.tipoBtnActivo]} onPress={() => setTipoComp('factura')}>
-                  <Text style={[s.tipoTxt, tipoComp === 'factura' && s.tipoTxtActivo]}>📋 Factura</Text>
+                  <Text style={[s.tipoTxt, tipoComp === 'factura' && s.tipoTxtActivo]}>Factura</Text>
                 </TouchableOpacity>
               </View>
 
@@ -199,7 +199,7 @@ export default function FacturaScreen() {
               </TouchableOpacity>
 
               <Text style={s.aviso}>
-                📌 El comprobante quedará registrado en tu historial de cargas
+                El comprobante quedará registrado en tu historial de cargas
               </Text>
             </View>
           </>

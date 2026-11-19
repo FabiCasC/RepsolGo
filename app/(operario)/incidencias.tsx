@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
+import Svg, { Path, Circle } from 'react-native-svg'
 import { Colors } from '../../src/constants/colors'
 import { Button } from '../../src/components/ui/Button'
 import { FirestoreService } from '../../src/services/firestore.service'
@@ -21,10 +22,10 @@ import { Timestamp } from '@firebase/firestore'
 type Categoria = 'derrame' | 'falla_surtidor' | 'accidente' | 'otro'
 
 const CATEGORIAS: { id: Categoria; label: string; icon: string; color: string }[] = [
-  { id: 'derrame', label: 'Derrame', icon: '🛢️', color: '#EF4444' },
-  { id: 'falla_surtidor', label: 'Falla de surtidor', icon: '⛽', color: '#F97316' },
-  { id: 'accidente', label: 'Accidente', icon: '🚨', color: '#8B5CF6' },
-  { id: 'otro', label: 'Otro', icon: '📋', color: '#6B7280' },
+  { id: 'derrame', label: 'Derrame', icon: 'barrel', color: '#EF4444' },
+  { id: 'falla_surtidor', label: 'Falla de surtidor', icon: 'gas', color: '#F97316' },
+  { id: 'accidente', label: 'Accidente', icon: 'alert', color: '#8B5CF6' },
+  { id: 'otro', label: 'Otro', icon: 'clipboard', color: '#6B7280' },
 ]
 
 interface Incidencia {
@@ -197,7 +198,7 @@ export default function IncidenciasScreen() {
               </View>
             ) : (
               <TouchableOpacity style={styles.fotoBtn} onPress={handleTomarFoto} activeOpacity={0.85}>
-                <Text style={styles.fotoBtnIcon}>📷</Text>
+                <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" style={styles.fotoBtnIcon}><Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke={Colors.navy} strokeWidth={1.8} strokeLinejoin="round"/><Circle cx="12" cy="13" r="4" stroke={Colors.navy} strokeWidth={1.8}/></Svg>
                 <Text style={styles.fotoBtnText}>Agregar foto</Text>
               </TouchableOpacity>
             )}
@@ -219,7 +220,7 @@ export default function IncidenciasScreen() {
             </View>
           ) : incidencias.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📋</Text>
+              <Svg width={40} height={40} viewBox="0 0 24 24" fill="none" style={styles.emptyIcon}><Path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke={Colors.textMuted} strokeWidth={1.8} strokeLinejoin="round"/><Rect x="9" y="3" width="6" height="4" rx="1" stroke={Colors.textMuted} strokeWidth={1.8}/></Svg>
               <Text style={styles.emptyTitle}>Sin incidencias</Text>
               <Text style={styles.emptyDesc}>No has registrado incidencias aún.</Text>
             </View>

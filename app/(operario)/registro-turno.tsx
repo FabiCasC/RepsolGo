@@ -9,6 +9,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Location from 'expo-location'
+import Svg, { Path, Circle } from 'react-native-svg'
 import { Colors } from '../../src/constants/colors'
 import { FirestoreService } from '../../src/services/firestore.service'
 import { useAuthStore } from '../../src/store/auth.store'
@@ -61,7 +62,7 @@ export default function RegistroTurnoScreen() {
         lng,
       })
       Alert.alert(
-        proximoTipo === 'entrada' ? '✅ Turno iniciado' : '👋 Turno finalizado',
+        proximoTipo === 'entrada' ? 'Turno iniciado' : 'Turno finalizado',
         proximoTipo === 'entrada'
           ? 'Has marcado tu entrada correctamente.'
           : 'Has marcado tu salida. ¡Buen trabajo!',
@@ -107,7 +108,7 @@ export default function RegistroTurnoScreen() {
         <View style={styles.content}>
           {/* Status card */}
           <View style={[styles.statusCard, estaEnTurno ? styles.statusActive : styles.statusInactive]}>
-            <Text style={styles.statusIcon}>{estaEnTurno ? '🟢' : '🔴'}</Text>
+            <Text style={styles.statusIcon}></Text>
             <Text style={styles.statusTitle}>{estaEnTurno ? 'Turno en curso' : 'Sin turno activo'}</Text>
             {estaEnTurno && getDuration() && (
               <Text style={styles.statusDuration}>Duración: {getDuration()}</Text>
@@ -173,6 +174,7 @@ const styles = StyleSheet.create({
   },
   statusActive: { backgroundColor: '#D1FAE5', borderColor: '#6EE7B7' },
   statusInactive: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  statusDot: { width: 14, height: 14, borderRadius: 7, marginRight: 6 },
   statusIcon: { fontSize: 48, marginBottom: 12 },
   statusTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
   statusDuration: { fontSize: 14, color: Colors.textSecondary, fontWeight: '600' },

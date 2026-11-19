@@ -1,12 +1,13 @@
 import React from 'react'
 import { Tabs } from 'expo-router'
 import { View, Text, StyleSheet } from 'react-native'
+import Svg, { Path, Circle } from 'react-native-svg'
 import { Colors } from '../../src/constants/colors'
 
 function ScanIcon({ color }: { color: string }) {
   return (
     <View style={s.iconContainer}>
-      <Text style={[s.emoji, { color }]}>🔍</Text>
+      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"><Circle cx="11" cy="11" r="8" stroke={color} strokeWidth={1.8}/><Path d="M21 21l-4.35-4.35" stroke={color} strokeWidth={1.8} strokeLinecap="round"/></Svg>
     </View>
   )
 }
@@ -14,7 +15,7 @@ function ScanIcon({ color }: { color: string }) {
 function AlertIcon({ color }: { color: string }) {
   return (
     <View style={s.iconContainer}>
-      <Text style={[s.emoji, { color }]}>⚠️</Text>
+      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"><Path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke={color} strokeWidth={1.8} strokeLinejoin="round"/><Path d="M12 9v4M12 17h.01" stroke={color} strokeWidth={1.8} strokeLinecap="round"/></Svg>
     </View>
   )
 }
@@ -22,7 +23,7 @@ function AlertIcon({ color }: { color: string }) {
 function ClockIcon({ color }: { color: string }) {
   return (
     <View style={s.iconContainer}>
-      <Text style={[s.emoji, { color }]}>🕐</Text>
+      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"><Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={1.8}/><Path d="M12 6v6l4 2" stroke={color} strokeWidth={1.8} strokeLinecap="round"/></Svg>
     </View>
   )
 }

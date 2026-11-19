@@ -33,14 +33,14 @@ function IcoLeaf({ color = '#16A34A', size = 22 }: { color?: string; size?: numb
 }
 
 const BADGES_BASE: Badge[] = [
-  { id: '1', nombre: 'Pionero', descripcion: 'Primera carga', icono: '🚀', ganado: false, color: '#F59E0B' },
-  { id: '2', nombre: 'Fiel', descripcion: '10 cargas', icono: '❤️', ganado: false, color: Colors.red },
-  { id: '3', nombre: 'Explorador', descripcion: '5 grifos', icono: '🗺️', ganado: false, color: '#3B82F6' },
-  { id: '4', nombre: 'Madrugador', descripcion: 'Carga temprana', icono: '🌅', ganado: false, color: '#F59E0B' },
-  { id: '5', nombre: 'Platinum', descripcion: 'Nivel Platino', icono: '💎', ganado: false },
-  { id: '6', nombre: 'Reto Rey', descripcion: '10 retos', icono: '👑', ganado: false },
-  { id: '7', nombre: 'Ahorrón', descripcion: '5 canjes', icono: '💰', ganado: false },
-  { id: '8', nombre: 'Estrella', descripcion: 'Un año activo', icono: '⭐', ganado: false },
+  { id: '1', nombre: 'Pionero', descripcion: 'Primera carga', icono: 'rocket', ganado: false, color: '#F59E0B' },
+  { id: '2', nombre: 'Fiel', descripcion: '10 cargas', icono: 'heart', ganado: false, color: Colors.red },
+  { id: '3', nombre: 'Explorador', descripcion: '5 grifos', icono: 'map', ganado: false, color: '#3B82F6' },
+  { id: '4', nombre: 'Madrugador', descripcion: 'Carga temprana', icono: 'sun', ganado: false, color: '#F59E0B' },
+  { id: '5', nombre: 'Platinum', descripcion: 'Nivel Platino', icono: 'diamond', ganado: false },
+  { id: '6', nombre: 'Reto Rey', descripcion: '10 retos', icono: 'crown', ganado: false },
+  { id: '7', nombre: 'Ahorrón', descripcion: '5 canjes', icono: 'savings', ganado: false },
+  { id: '8', nombre: 'Estrella', descripcion: 'Un año activo', icono: 'star', ganado: false },
 ]
 
 export default function RetosScreen() {
@@ -140,7 +140,7 @@ export default function RetosScreen() {
             <Text style={styles.sectionTitle}>Retos activos</Text>
             {retosActivos.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyText}>🎉 ¡Completaste todos los retos!</Text>
+                <Text style={styles.emptyText}>¡Completaste todos los retos!</Text>
                 <Text style={styles.emptyHint}>Pronto habrá nuevos desafíos</Text>
               </View>
             ) : (

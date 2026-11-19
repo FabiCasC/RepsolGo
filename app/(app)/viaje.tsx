@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, TextInput,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Line } from 'react-native-svg';
-import { Colors } from '@/src/constants/colors';
+  TouchableOpacity, TextInput, ActivityIndicator,
+} from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import Svg, { Path, Circle, Line } from 'react-native-svg'
+import { Colors } from '@/src/constants/colors'
+import { PlacesService } from '@/src/services/places.service'
+import type { GrifoRuta } from '@/src/services/places.service'
+import * as Location from 'expo-location'
+
+// --- Iconos SVG (sin emojis) ---
 
 function IcoRuta({ color = Colors.orange, size = 28 }: { color?: string; size?: number }) {
   return (
@@ -15,7 +20,7 @@ function IcoRuta({ color = Colors.orange, size = 28 }: { color?: string; size?: 
       <Path d="M5 8v5a3 3 0 003 3h8" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
       <Path d="M17 14l2 2-2 2" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
-  );
+  )
 }
 
 function IcoGasPump({ color = Colors.orange, size = 20 }: { color?: string; size?: number }) {
@@ -26,7 +31,7 @@ function IcoGasPump({ color = Colors.orange, size = 20 }: { color?: string; size
       <Line x1="5" y1="6" x2="11" y2="6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
       <Line x1="3" y1="22" x2="13" y2="22" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
     </Svg>
-  );
+  )
 }
 
 function IcoClock({ color = Colors.textSecondary, size = 14 }: { color?: string; size?: number }) {
@@ -35,110 +40,180 @@ function IcoClock({ color = Colors.textSecondary, size = 14 }: { color?: string;
       <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth={1.8} />
       <Path d="M12 6v6l4 2" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
     </Svg>
-  );
+  )
 }
 
-const GRIFOS_RUTA = [
-  { id: '1', nombre: 'Repsol Lurín Km 32', distancia: '32 km', tiempo: '28 min', precio90: 16.49, precio95: 18.29, espera: '~3 min', disponible: true },
-  { id: '2', nombre: 'Repsol Chincha Norte', distancia: '67 km', tiempo: '55 min', precio90: 16.29, precio95: 18.09, espera: '~10 min', disponible: true },
-  { id: '3', nombre: 'Repsol Ica Eje Central', distancia: '110 km', tiempo: '1h 28 min', precio90: 16.19, precio95: 17.99, espera: '~5 min', disponible: true },
-  { id: '4', nombre: 'Repsol Nasca Norte', distancia: '185 km', tiempo: '2h 15 min', precio90: 16.09, precio95: 17.89, espera: '~2 min', disponible: false },
-];
+function IcoSearch({ color = Colors.textMuted, size = 18 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="11" cy="11" r="8" stroke={color} strokeWidth={1.8} />
+      <Path d="M21 21l-4.35-4.35" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  )
+}
+
+function IcoMapPin({ color = Colors.navy, size = 48 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke={color} strokeWidth={1.5} />
+      <Circle cx="12" cy="10" r="3" stroke={color} strokeWidth={1.5} />
+    </Svg>
+  )
+}
+
+function IcoNavigation({ color = Colors.orange, size = 14 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 11l19-9-9 19-2-8-8-2z" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  )
+}
+
+// --- Pantalla ---
 
 export default function ViajeScreen() {
-  const [destino, setDestino] = useState('');
-  const [buscando, setBuscando] = useState(false);
-  const [mostrarGrifos, setMostrarGrifos] = useState(false);
+  const [destino, setDestino] = useState('')
+  const [buscando, setBuscando] = useState(false)
+  const [grifos, setGrifos] = useState<GrifoRuta[]>([])
+  const [buscado, setBuscado] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
-  function handleBuscar() {
-    if (!destino.trim()) return;
-    setBuscando(true);
-    setTimeout(() => {
-      setBuscando(false);
-      setMostrarGrifos(true);
-    }, 1200);
+  async function handleBuscar() {
+    if (!destino.trim()) return
+    setBuscando(true)
+    setGrifos([])
+    setBuscado(false)
+    setErrorMsg('')
+
+    try {
+      // Obtener ubicación actual del usuario
+      let origen = { latitude: -12.0464, longitude: -77.0428 } // Lima por defecto
+
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        })
+        origen = { latitude: loc.coords.latitude, longitude: loc.coords.longitude }
+      }
+
+      const resultados = await PlacesService.buscarGrifosEnRuta(origen, destino.trim())
+      setGrifos(resultados)
+      setBuscado(true)
+
+      if (resultados.length === 0) {
+        setErrorMsg(`No encontramos grifos Repsol en ruta a "${destino}". Intenta con una ciudad más grande.`)
+      }
+    } catch (err) {
+      console.error('[ViajeScreen] error:', err)
+      setErrorMsg('No se pudo buscar la ruta. Verifica tu conexión e intenta de nuevo.')
+      setBuscado(true)
+    } finally {
+      setBuscando(false)
+    }
   }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Header */}
         <View style={styles.header}>
           <IcoRuta size={28} />
           <Text style={styles.title}>Modo Viaje</Text>
         </View>
         <Text style={styles.subtitle}>
-          Ingresa tu destino y te mostramos todos los grifos Repsol en ruta con precios y disponibilidad.
+          Ingresa tu destino y te mostramos los grifos Repsol en ruta con precios y disponibilidad.
         </Text>
 
         {/* Buscador */}
         <View style={styles.searchBox}>
-          <TextInput
-            style={styles.input}
-            placeholder="¿A dónde vas? (ej: Ica, Nasca, Arequipa)"
-            placeholderTextColor={Colors.textMuted}
-            value={destino}
-            onChangeText={setDestino}
-            onSubmitEditing={handleBuscar}
-            returnKeyType="search"
-          />
+          <View style={styles.inputWrap}>
+            <IcoSearch size={18} color={Colors.textMuted} />
+            <TextInput
+              style={styles.input}
+              placeholder="Destino (ej: Ica, Nasca, Arequipa)"
+              placeholderTextColor={Colors.textMuted}
+              value={destino}
+              onChangeText={setDestino}
+              onSubmitEditing={handleBuscar}
+              returnKeyType="search"
+            />
+          </View>
           <TouchableOpacity
-            style={[styles.btnBuscar, !destino.trim() && styles.btnDisabled]}
+            style={[styles.btnBuscar, (!destino.trim() || buscando) && styles.btnDisabled]}
             onPress={handleBuscar}
-            disabled={!destino.trim()}
+            disabled={!destino.trim() || buscando}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnText}>{buscando ? 'Buscando...' : 'Buscar ruta'}</Text>
+            {buscando
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.btnText}>Buscar ruta</Text>
+            }
           </TouchableOpacity>
         </View>
 
         {/* Resultados */}
-        {mostrarGrifos && (
+        {buscado && !errorMsg && grifos.length > 0 && (
           <>
             <View style={styles.resultHeader}>
               <Text style={styles.resultTitle}>
-                {GRIFOS_RUTA.length} grifos Repsol en ruta a {destino}
+                {grifos.length} grifo{grifos.length !== 1 ? 's' : ''} Repsol en ruta a {destino}
               </Text>
             </View>
 
-            {GRIFOS_RUTA.map(grifo => (
-              <View key={grifo.id} style={[styles.grifoCard, !grifo.disponible && styles.grifoCardOff]}>
+            {grifos.map(grifo => (
+              <View key={grifo.id} style={[styles.grifoCard, !grifo.abierto24h && styles.grifoCardOff]}>
                 <View style={styles.grifoTop}>
                   <View style={styles.grifoIconWrap}>
-                    <IcoGasPump color={grifo.disponible ? Colors.orange : Colors.textMuted} size={20} />
+                    <IcoGasPump
+                      color={grifo.abierto24h ? Colors.orange : Colors.textMuted}
+                      size={20}
+                    />
                   </View>
                   <View style={styles.grifoInfo}>
-                    <Text style={[styles.grifoNombre, !grifo.disponible && styles.textOff]}>
+                    <Text style={[styles.grifoNombre, !grifo.abierto24h && styles.textOff]}>
                       {grifo.nombre}
                     </Text>
+                    <Text style={styles.grifoDireccion} numberOfLines={1}>
+                      {grifo.direccion}
+                    </Text>
                     <View style={styles.grifoMeta}>
-                      <Text style={styles.grifoDistancia}>{grifo.distancia}</Text>
-                      <Text style={styles.sep}>·</Text>
-                      <IcoClock />
-                      <Text style={styles.grifoTiempo}> {grifo.tiempo}</Text>
+                      {grifo.distanciaTexto ? (
+                        <>
+                          <IcoNavigation size={12} color={Colors.orange} />
+                          <Text style={styles.grifoDistancia}> {grifo.distanciaTexto}</Text>
+                          <Text style={styles.sep}>·</Text>
+                        </>
+                      ) : null}
+                      <IcoClock size={13} />
+                      <Text style={styles.grifoTiempo}> {grifo.duracionTexto || grifo.tiempoEspera}</Text>
                     </View>
                   </View>
-                  {!grifo.disponible && (
+                  {!grifo.abierto24h && (
                     <View style={styles.cerradoBadge}>
                       <Text style={styles.cerradoText}>Cerrado</Text>
                     </View>
                   )}
                 </View>
 
-                {grifo.disponible && (
+                {grifo.precios.length > 0 && (
                   <View style={styles.grifoBottom}>
-                    <View style={styles.precioChip}>
-                      <Text style={styles.precioLabel}>90 oct</Text>
-                      <Text style={styles.precioValor}>S/ {grifo.precio90.toFixed(2)}</Text>
-                    </View>
-                    <View style={styles.precioChip}>
-                      <Text style={styles.precioLabel}>95 oct</Text>
-                      <Text style={styles.precioValor}>S/ {grifo.precio95.toFixed(2)}</Text>
-                    </View>
+                    {grifo.precios.slice(0, 2).map(p => (
+                      <View key={p.tipo} style={styles.precioChip}>
+                        <Text style={styles.precioLabel}>{p.tipo}</Text>
+                        {p.precio > 0
+                          ? <Text style={styles.precioValor}>S/ {p.precio.toFixed(2)}</Text>
+                          : <Text style={styles.precioSinDato}>Sin dato</Text>
+                        }
+                      </View>
+                    ))}
                     <View style={styles.esperaChip}>
                       <IcoClock color={Colors.green} size={12} />
-                      <Text style={styles.esperaText}> {grifo.espera}</Text>
+                      <Text style={styles.esperaText}> {grifo.tiempoEspera}</Text>
                     </View>
                   </View>
                 )}
@@ -147,8 +222,19 @@ export default function ViajeScreen() {
           </>
         )}
 
-        {/* Placeholder vacío */}
-        {!mostrarGrifos && !buscando && (
+        {/* Error / sin resultados */}
+        {buscado && (errorMsg || grifos.length === 0) && (
+          <View style={styles.emptyState}>
+            <IcoMapPin color={Colors.textMuted} size={40} />
+            <Text style={styles.emptyTitle}>Sin resultados</Text>
+            <Text style={styles.emptyText}>
+              {errorMsg || `No encontramos grifos Repsol en ruta a "${destino}".`}
+            </Text>
+          </View>
+        )}
+
+        {/* Estado inicial */}
+        {!buscado && !buscando && (
           <View style={styles.emptyState}>
             <IcoRuta color={Colors.textMuted} size={48} />
             <Text style={styles.emptyTitle}>Planifica tu viaje</Text>
@@ -158,28 +244,41 @@ export default function ViajeScreen() {
           </View>
         )}
 
+        {/* Cargando */}
+        {buscando && (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={Colors.orange} />
+            <Text style={styles.loadingText}>Buscando grifos Repsol en ruta...</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.surface },
   scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingBottom: 40 },
 
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   title: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
   subtitle: { fontSize: 13, color: Colors.textSecondary, marginBottom: 20, lineHeight: 18 },
 
   searchBox: { gap: 10, marginBottom: 20 },
-  input: {
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: '#fff',
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: Colors.border,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 11,
+  },
+  input: {
+    flex: 1,
     fontSize: 14,
     color: Colors.textPrimary,
   },
@@ -188,6 +287,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 13,
     alignItems: 'center',
+    minHeight: 46,
+    justifyContent: 'center',
   },
   btnDisabled: { opacity: 0.4 },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
@@ -212,30 +313,42 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   grifoInfo: { flex: 1 },
-  grifoNombre: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 3 },
+  grifoNombre: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 2 },
+  grifoDireccion: { fontSize: 11, color: Colors.textMuted, marginBottom: 4 },
   textOff: { color: Colors.textMuted },
-  grifoMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  grifoMeta: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   grifoDistancia: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
-  sep: { color: Colors.textMuted },
+  sep: { color: Colors.textMuted, marginHorizontal: 2 },
   grifoTiempo: { fontSize: 12, color: Colors.textSecondary },
-  cerradoBadge: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  cerradoBadge: {
+    backgroundColor: '#FEE2E2', paddingHorizontal: 8,
+    paddingVertical: 3, borderRadius: 6,
+  },
   cerradoText: { fontSize: 11, color: '#DC2626', fontWeight: '600' },
 
   grifoBottom: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   precioChip: {
     backgroundColor: Colors.surface,
     borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5,
-    flexDirection: 'row', gap: 4,
+    flexDirection: 'row', gap: 4, alignItems: 'center',
   },
   precioLabel: { fontSize: 11, color: Colors.textSecondary },
   precioValor: { fontSize: 11, fontWeight: '700', color: Colors.textPrimary },
+  precioSinDato: { fontSize: 11, color: Colors.textMuted, fontStyle: 'italic' },
   esperaChip: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F0FDF4', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
+    backgroundColor: '#F0FDF4', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 5,
   },
   esperaText: { fontSize: 11, color: Colors.green, fontWeight: '600' },
 
   emptyState: { alignItems: 'center', marginTop: 60, gap: 12 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  emptyText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 18, maxWidth: 280 },
-});
+  emptyText: {
+    fontSize: 13, color: Colors.textSecondary,
+    textAlign: 'center', lineHeight: 18, maxWidth: 280,
+  },
+
+  loadingState: { alignItems: 'center', marginTop: 60, gap: 16 },
+  loadingText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
+})

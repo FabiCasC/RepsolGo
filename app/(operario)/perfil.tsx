@@ -9,6 +9,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import Svg, { Path, Circle } from 'react-native-svg'
 import { Colors } from '../../src/constants/colors'
 import { useAuthStore } from '../../src/store/auth.store'
 
@@ -41,7 +42,7 @@ export default function PerfilOperarioScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mi perfil</Text>
         <View style={styles.rolBadge}>
-          <Text style={styles.rolText}>⛽ OPERARIO</Text>
+          <Text style={styles.rolText}>OPERARIO</Text>
         </View>
       </View>
 
@@ -58,7 +59,7 @@ export default function PerfilOperarioScreen() {
           <Text style={styles.sectionTitle}>Información del grifo</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>⛽</Text>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={styles.infoIcon}><Path d="M3 22V4a1 1 0 011-1h10a1 1 0 011 1v9" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round"/><Path d="M5 6h6M3 22h10" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round"/></Svg>
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Grifo asignado</Text>
                 <Text style={styles.infoValue}>Repsol Javier Prado Este</Text>
@@ -66,7 +67,7 @@ export default function PerfilOperarioScreen() {
             </View>
             <View style={styles.divider} />
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>📍</Text>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={styles.infoIcon}><Path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" stroke={Colors.navy} strokeWidth={1.8}/><Circle cx="12" cy="10" r="3" stroke={Colors.navy} strokeWidth={1.8}/></Svg>
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Dirección</Text>
                 <Text style={styles.infoValue}>Av. Javier Prado Este 4200, San Borja</Text>
@@ -74,7 +75,7 @@ export default function PerfilOperarioScreen() {
             </View>
             <View style={styles.divider} />
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>🕐</Text>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={styles.infoIcon}><Circle cx="12" cy="12" r="10" stroke={Colors.navy} strokeWidth={1.8}/><Path d="M12 6v6l4 2" stroke={Colors.navy} strokeWidth={1.8} strokeLinecap="round"/></Svg>
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Horario</Text>
                 <Text style={styles.infoValue}>Lunes a Domingo · 24 horas</Text>
@@ -91,7 +92,7 @@ export default function PerfilOperarioScreen() {
               onPress={() => router.push('/(operario)/registro-turno')}
               activeOpacity={0.7}
             >
-              <Text style={styles.actionIcon}>🕐</Text>
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" style={styles.actionIcon}><Circle cx="12" cy="12" r="10" stroke={Colors.navy} strokeWidth={1.8}/><Path d="M12 6v6l4 2" stroke={Colors.navy} strokeWidth={1.8} strokeLinecap="round"/></Svg>
               <Text style={styles.actionLabel}>Registrar turno</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
@@ -101,7 +102,7 @@ export default function PerfilOperarioScreen() {
               onPress={() => router.push('/(operario)/incidencias')}
               activeOpacity={0.7}
             >
-              <Text style={styles.actionIcon}>⚠️</Text>
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" style={styles.actionIcon}><Path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#F97316" strokeWidth={1.8} strokeLinejoin="round"/><Path d="M12 9v4M12 17h.01" stroke="#F97316" strokeWidth={1.8} strokeLinecap="round"/></Svg>
               <Text style={styles.actionLabel}>Ver incidencias</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>

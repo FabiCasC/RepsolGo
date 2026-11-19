@@ -35,6 +35,7 @@ function BadgeIcon({ icono, color, size = 26 }: { icono: string; color: string; 
           <Line x1="15" y1="6" x2="15" y2="21" stroke={color} strokeWidth={1.8} />
         </Svg>
       )
+    case 'sun':
     case 'sunrise':
     case '🌅':
       return (
@@ -59,6 +60,7 @@ function BadgeIcon({ icono, color, size = 26 }: { icono: string; color: string; 
           <Path d="M2 19h20M2 19l3-9 5 4 2-7 2 7 5-4 3 9" stroke={color} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
         </Svg>
       )
+    case 'savings':
     case 'piggy':
     case '💰':
       return (

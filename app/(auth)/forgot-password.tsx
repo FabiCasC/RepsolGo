@@ -4,6 +4,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
+import Svg, { Path, Circle, Polyline } from 'react-native-svg'
 import { Colors } from '@/src/constants/colors';
 import { sendRecoveryEmail } from '@/src/services/email.service';
 
@@ -85,7 +86,12 @@ export default function ForgotPasswordScreen() {
 
         <View style={styles.card}>
           <View style={styles.iconBox}>
-            <Text style={{ fontSize: 40 }}>{sent ? '✅' : '🔑'}</Text>
+            <Svg width={40} height={40} viewBox="0 0 24 24" fill="none">
+            {sent
+              ? <><Circle cx="12" cy="12" r="10" stroke={Colors.green} strokeWidth={2}/><Polyline points="9,12 11,14 15,10" stroke={Colors.green} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"/></>
+              : <><Path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/></>
+            }
+          </Svg>
           </View>
 
           {sent ? (

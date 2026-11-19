@@ -2,6 +2,7 @@ import React from 'react'
 import { Tabs } from 'expo-router'
 import { View, Text, StyleSheet } from 'react-native'
 import { Colors } from '../../src/constants/colors'
+import Svg, { Path, Circle, Polygon } from 'react-native-svg'
 import { AuthGuard } from '../../src/components/auth/AuthGuard'
 
 function MapIcon({ color }: { color: string }) {
@@ -17,7 +18,9 @@ function MapIcon({ color }: { color: string }) {
 function StarIcon({ color }: { color: string }) {
   return (
     <View style={tabIconStyles.container}>
-      <Text style={[tabIconStyles.emoji, { color }]}>⭐</Text>
+      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+        <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      </Svg>
     </View>
   )
 }
@@ -33,7 +36,11 @@ function CameraIcon({ color }: { color: string }) {
 function TrophyIcon({ color }: { color: string }) {
   return (
     <View style={tabIconStyles.container}>
-      <Text style={[tabIconStyles.emoji, { color }]}>🏆</Text>
+      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+        <Path d="M8 21h8M12 17v4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+        <Path d="M5 3H3v5a4 4 0 004 4M19 3h2v5a4 4 0 01-4 4" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+        <Path d="M7 3h10v7a5 5 0 01-10 0V3z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+      </Svg>
     </View>
   )
 }
@@ -107,7 +114,12 @@ export default function AppLayout() {
             title: 'Viaje',
             tabBarIcon: ({ color }) => (
               <View style={tabIconStyles.container}>
-                <Text style={[tabIconStyles.emoji, { color }]}>🚗</Text>
+                <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                  <Path d="M5 17H3a2 2 0 01-2-2V9a7 7 0 017-7h8a7 7 0 017 7v6a2 2 0 01-2 2h-2" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+                  <Path d="M7 17h10" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+                  <Circle cx="7.5" cy="17.5" r="2.5" stroke={color} strokeWidth={1.8} />
+                  <Circle cx="16.5" cy="17.5" r="2.5" stroke={color} strokeWidth={1.8} />
+                </Svg>
               </View>
             ),
           }}

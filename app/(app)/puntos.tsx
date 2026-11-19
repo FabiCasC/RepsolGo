@@ -117,7 +117,7 @@ export default function PuntosScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Buenos días,</Text>
-          <Text style={styles.userName}>{user?.nombre ?? 'Usuario'} 👋</Text>
+          <Text style={styles.userName}>{user?.nombre ?? 'Usuario'}</Text>
         </View>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>

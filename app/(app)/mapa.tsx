@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native'
 import MapView, { Region } from 'react-native-maps'
+import Svg, { Path, Circle } from 'react-native-svg'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Location from 'expo-location'
 import { Colors } from '../../src/constants/colors'
@@ -17,7 +18,27 @@ import { GrifoMarker } from '../../src/components/mapa/GrifoMarker'
 import { GrifoBottomSheet } from '../../src/components/mapa/GrifoBottomSheet'
 import { Config } from '../../src/constants/config'
 import { FirestoreService } from '../../src/services/firestore.service'
+import { PlacesService } from '../../src/services/places.service'
 import type { Grifo } from '../../src/types'
+
+
+function IcoSearch({ color = '#9CA3AF', size = 18 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox='0 0 24 24' fill='none'>
+      <Circle cx='11' cy='11' r='8' stroke={color} strokeWidth={1.8} />
+      <Path d='M21 21l-4.35-4.35' stroke={color} strokeWidth={1.8} strokeLinecap='round' />
+    </Svg>
+  )
+}
+
+function IcoMapPin({ color = '#1B2B6B', size = 22 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox='0 0 24 24' fill='none'>
+      <Path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z' stroke={color} strokeWidth={1.8} />
+      <Circle cx='12' cy='10' r='3' stroke={color} strokeWidth={1.8} />
+    </Svg>
+  )
+}
 
 export default function MapaScreen() {
   const user = useAuthStore(state => state.user)
@@ -36,13 +57,22 @@ export default function MapaScreen() {
       if (status === 'granted') {
         setLocationReady(true)
       }
-      // Cargar grifos desde Firestore
+      // Cargar grifos reales desde Google Places (con cache en Firestore)
       try {
-        await FirestoreService.seedGrifosDemo()
-        const data = await FirestoreService.getGrifos()
+        let ubicacion = { latitude: -12.0464, longitude: -77.0428 }
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+          ubicacion = { latitude: loc.coords.latitude, longitude: loc.coords.longitude }
+        }
+        const data = await PlacesService.buscarGrifosCercanos(ubicacion, 15000)
         setGrifos(data)
       } catch (err) {
         console.error('Error cargando grifos:', err)
+        // Fallback a Firestore si Places falla
+        try {
+          const data = await FirestoreService.getGrifos()
+          setGrifos(data)
+        } catch {}
       } finally {
         setLoadingGrifos(false)
       }
@@ -140,7 +170,7 @@ export default function MapaScreen() {
       {/* Search bar */}
       <SafeAreaView style={styles.searchOverlay} edges={['top']}>
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <IcoSearch size={18} color={Colors.textMuted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar grifo Repsol..."
@@ -173,7 +203,7 @@ export default function MapaScreen() {
       <TouchableOpacity style={styles.recenterBtn} onPress={handleRecenter} activeOpacity={0.85}>
         {recentering
           ? <ActivityIndicator size="small" color={Colors.navy} />
-          : <Text style={styles.recenterIcon}>📍</Text>
+          : <IcoMapPin size={22} color={Colors.navy} />
         }
       </TouchableOpacity>
 

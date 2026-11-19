@@ -159,7 +159,7 @@ export default function RankingGrifosScreen() {
         {(['general', 'limpieza', 'atencion', 'velocidad'] as Filtro[]).map(f => (
           <TouchableOpacity key={f} style={[s.filtroBtn, filtro === f && s.filtroBtnActivo]} onPress={() => setFiltro(f)}>
             <Text style={[s.filtroTxt, filtro === f && s.filtroTxtActivo]}>
-              {f === 'general' ? '⭐ General' : f === 'limpieza' ? '🧹 Limpieza' : f === 'atencion' ? '😊 Atención' : '⚡ Velocidad'}
+              {f === 'general' ? 'General' : f === 'limpieza' ? 'Limpieza' : f === 'atencion' ? 'Atención' : 'Velocidad'}
             </Text>
           </TouchableOpacity>
         ))}

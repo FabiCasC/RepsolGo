@@ -91,7 +91,7 @@ export default function OCRBoletaScreen() {
         {estado === 'inicio' && (
           <>
             <View style={s.infoCard}>
-              <Text style={s.infoIco}>📄</Text>
+              <Svg width={40} height={40} viewBox="0 0 24 24" fill="none" style={s.infoIco}><Path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke={Colors.orange} strokeWidth={1.8} strokeLinejoin="round"/><Polyline points="14,2 14,8 20,8" stroke={Colors.orange} strokeWidth={1.8} strokeLinejoin="round"/><Path d="M9 15h6M9 11h4" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round"/></Svg>
               <View style={s.infoTextos}>
                 <Text style={s.infoTitulo}>¿Tienes boletas antiguas?</Text>
                 <Text style={s.infoDesc}>
@@ -116,17 +116,17 @@ export default function OCRBoletaScreen() {
             </View>
 
             <TouchableOpacity style={s.btnPrimario} onPress={abrirCamara}>
-              <Text style={s.btnPrimarioTxt}>📸 Fotografiar boleta</Text>
+              <Text style={s.btnPrimarioTxt}>Fotografiar boleta</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.btnSecundario} onPress={seleccionarGaleria}>
-              <Text style={s.btnSecundarioTxt}>🖼️ Seleccionar de galería</Text>
+              <Text style={s.btnSecundarioTxt}>Seleccionar de galería</Text>
             </TouchableOpacity>
           </>
         )}
 
         {estado === 'procesando' && (
           <View style={s.procesando}>
-            <Text style={s.procesandoIco}>🔍</Text>
+            <Svg width={40} height={40} viewBox="0 0 24 24" fill="none" style={s.procesandoIco}><Circle cx="11" cy="11" r="8" stroke={Colors.orange} strokeWidth={1.8}/><Path d="M21 21l-4.35-4.35" stroke={Colors.orange} strokeWidth={1.8} strokeLinecap="round"/></Svg>
             <Text style={s.procesandoTitulo}>Procesando boleta...</Text>
             <Text style={s.procesandoDesc}>El OCR está leyendo el monto, fecha y número de boleta</Text>
           </View>
@@ -152,7 +152,7 @@ export default function OCRBoletaScreen() {
             </View>
 
             <TouchableOpacity style={s.btnPrimario} onPress={acreditar}>
-              <Text style={s.btnPrimarioTxt}>✅ Acreditar puntos</Text>
+              <Text style={s.btnPrimarioTxt}>Acreditar puntos</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.btnSecundario} onPress={() => setEstado('inicio')}>
               <Text style={s.btnSecundarioTxt}>Intentar con otra boleta</Text>
@@ -162,7 +162,7 @@ export default function OCRBoletaScreen() {
 
         {estado === 'exito' && resultado && (
           <View style={s.exitoCard}>
-            <Text style={s.exitoIco}>🎉</Text>
+            <Svg width={56} height={56} viewBox="0 0 24 24" fill="none" style={s.exitoIco}><Circle cx="12" cy="12" r="10" stroke={Colors.green} strokeWidth={2}/><Polyline points="9,12 11,14 15,10" stroke={Colors.green} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"/></Svg>
             <Text style={s.exitoTitulo}>¡Puntos acreditados!</Text>
             <Text style={s.exitoPuntos}>+{resultado.puntos} puntos</Text>
             <Text style={s.exitoDesc}>

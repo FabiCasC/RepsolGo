@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path, Circle } from 'react-native-svg'
 import { Colors } from '@/src/constants/colors';
 import { FirestoreService, type CargaData } from '@/src/services/firestore.service';
 import { useAuthStore } from '@/src/store/auth.store';
@@ -13,9 +14,9 @@ const COMBUSTIBLES: Record<string, number> = {
 };
 
 const COMPENSACIONES = [
-  { id: '1', nombre: 'Siembra 1 árbol', puntos: 500, descripcion: 'Absorbe ~21 kg CO₂/año', icono: '🌳' },
-  { id: '2', nombre: 'Energía solar x1 día', puntos: 300, descripcion: 'Evita 2 kg CO₂', icono: '☀️' },
-  { id: '3', nombre: 'Certificado verde', puntos: 1000, descripcion: 'Offset 10 kg CO₂', icono: '🌿' },
+  { id: '1', nombre: 'Siembra 1 árbol', puntos: 500, descripcion: 'Absorbe ~21 kg CO₂/año', icono: 'tree' },
+  { id: '2', nombre: 'Energía solar x1 día', puntos: 300, descripcion: 'Evita 2 kg CO₂', icono: 'sun' },
+  { id: '3', nombre: 'Certificado verde', puntos: 1000, descripcion: 'Offset 10 kg CO₂', icono: 'leaf' },
 ];
 
 type HistorialMes = { mes: string; litros: number; tipo: string; co2: number };
@@ -80,7 +81,7 @@ export default function HuellaCarbonoScreen() {
         canjeId: `comp_${item.id}`,
       });
       setPuntos(p => p - item.puntos);
-      Alert.alert('¡Canje exitoso!', `Has canjeado "${item.nombre}". ¡Gracias por cuidar el planeta! 🌍`);
+      Alert.alert('¡Canje exitoso!', `Has canjeado "${item.nombre}". ¡Gracias por cuidar el planeta!`);
     } catch (e) {
       Alert.alert('Error', 'No se pudo completar el canje. Intenta de nuevo.');
     } finally {
@@ -105,10 +106,10 @@ export default function HuellaCarbonoScreen() {
 
       <View style={s.tabs}>
         <TouchableOpacity style={[s.tab, tab === 'huella' && s.tabActivo]} onPress={() => setTab('huella')}>
-          <Text style={[s.tabTxt, tab === 'huella' && s.tabTxtActivo]}>🌍 Mi huella</Text>
+          <Text style={[s.tabTxt, tab === 'huella' && s.tabTxtActivo]}>Mi huella</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.tab, tab === 'compensar' && s.tabActivo]} onPress={() => setTab('compensar')}>
-          <Text style={[s.tabTxt, tab === 'compensar' && s.tabTxtActivo]}>💚 Compensar</Text>
+          <Text style={[s.tabTxt, tab === 'compensar' && s.tabTxtActivo]}>Compensar</Text>
         </TouchableOpacity>
       </View>
 
@@ -177,7 +178,7 @@ export default function HuellaCarbonoScreen() {
             <View style={s.section}>
               <Text style={s.sectionTitle}>Consejo del mes</Text>
               <View style={s.consejo}>
-                <Text style={s.consejoIco}>💡</Text>
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" style={s.consejoIco}><Path d="M12 2a7 7 0 015 11.95V17a2 2 0 01-2 2h-6a2 2 0 01-2-2v-3.05A7 7 0 0112 2z" stroke="#F59E0B" strokeWidth={1.8}/><Path d="M9 21h6" stroke="#F59E0B" strokeWidth={1.8} strokeLinecap="round"/></Svg>
                 <Text style={s.consejoTxt}>
                   Si reduces 10 litros de consumo mensual, evitas <Text style={{ fontWeight: '800', color: Colors.green }}>23 kg de CO₂</Text>. Equivale a plantar 1 árbol pequeño.
                 </Text>
@@ -188,7 +189,7 @@ export default function HuellaCarbonoScreen() {
           <>
             <View style={s.puntosHeader}>
               <Text style={s.puntosLabel}>Puntos verdes disponibles</Text>
-              <Text style={s.puntosNum}>💚 {puntos.toLocaleString()} pts</Text>
+              <Text style={s.puntosNum}>{puntos.toLocaleString()} pts</Text>
             </View>
 
             <Text style={s.compensarSubtitulo}>
@@ -221,7 +222,7 @@ export default function HuellaCarbonoScreen() {
 
             <View style={s.infoBox}>
               <Text style={s.infoTxt}>
-                🌿 RepsolGo compensa en alianza con organizaciones de reforestación en Perú. Cada acción tiene un impacto real y medible.
+                RepsolGo compensa en alianza con organizaciones de reforestación en Perú. Cada acción tiene un impacto real y medible.
               </Text>
             </View>
           </>
