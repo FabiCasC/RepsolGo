@@ -3,9 +3,11 @@ import type { Grifo } from '../types'
 
 const DIRECTIONS_BASE = 'https://maps.googleapis.com/maps/api/directions/json'
 const GEOCODE_BASE = 'https://maps.googleapis.com/maps/api/geocode/json'
+const AUTOCOMPLETE_BASE = 'https://maps.googleapis.com/maps/api/place/autocomplete/json'
 
+// ✅ FIX: hardcoded key — process.env.GOOGLE_MAPS_API_KEY siempre es undefined en Expo/RN
 function getApiKey(): string {
-  return (global as any).__GOOGLE_MAPS_API_KEY__ ?? process.env.GOOGLE_MAPS_API_KEY ?? ''
+  return 'AIzaSyBspcTEh828O90o862FewdtQeCek9MIXOk'
 }
 
 export interface LatLng {
@@ -256,5 +258,47 @@ export const PlacesService = {
     }
 
     return resultado
+  },
+
+  /**
+   * ✅ Autocomplete de lugares usando Google Places Autocomplete API
+   * Devuelve hasta 5 sugerencias de lugares para el texto ingresado.
+   * Componente: búsqueda de destinos en viaje.tsx
+   */
+  async autocomplete(texto: string): Promise<string[]> {
+    const key = getApiKey()
+    if (!key) {
+      console.warn('[PlacesService] Sin API key — autocomplete no disponible')
+      return []
+    }
+    if (!texto || texto.trim().length < 2) return []
+
+    try {
+      const params = new URLSearchParams({
+        input: texto.trim(),
+        key,
+        language: 'es',
+        components: 'country:pe', // limitar a Perú
+        types: '(cities)',        // ciudades y localidades para destinos de viaje
+      })
+      const url = `${AUTOCOMPLETE_BASE}?${params.toString()}`
+      const resp = await fetch(url)
+      if (!resp.ok) {
+        console.warn('[PlacesService] Autocomplete HTTP error:', resp.status)
+        return []
+      }
+      const data = await resp.json()
+      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+        console.warn('[PlacesService] Autocomplete status:', data.status)
+        return []
+      }
+      // Extraer description de cada predicción
+      return (data.predictions ?? [])
+        .slice(0, 5)
+        .map((p: { description: string }) => p.description)
+    } catch (err) {
+      console.warn('[PlacesService] Autocomplete error:', err)
+      return []
+    }
   },
 }

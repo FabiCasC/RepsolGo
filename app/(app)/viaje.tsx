@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, TextInput, ActivityIndicator,
@@ -77,9 +77,40 @@ export default function ViajeScreen() {
   const [grifos, setGrifos] = useState<GrifoRuta[]>([])
   const [buscado, setBuscado] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [sugerencias, setSugerencias] = useState<string[]>([])
+  const [cargandoSugerencias, setCargandoSugerencias] = useState(false)
+
+  // Pide autocomplete mientras el usuario escribe (debounce 300ms)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleCambioDestino(texto: string) {
+    setDestino(texto)
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    if (texto.trim().length < 2) {
+      setSugerencias([])
+      return
+    }
+    timeoutRef.current = setTimeout(async () => {
+      setCargandoSugerencias(true)
+      try {
+        const resultados = await PlacesService.autocomplete(texto)
+        setSugerencias(resultados)
+      } catch {
+        setSugerencias([])
+      } finally {
+        setCargandoSugerencias(false)
+      }
+    }, 300)
+  }
+
+  function handleSugerencia(lugar: string) {
+    setDestino(lugar)
+    setSugerencias([])
+  }
 
   async function handleBuscar() {
     if (!destino.trim()) return
+    setSugerencias([])
     setBuscando(true)
     setGrifos([])
     setBuscado(false)
@@ -138,11 +169,32 @@ export default function ViajeScreen() {
               placeholder="Destino (ej: Ica, Nasca, Arequipa)"
               placeholderTextColor={Colors.textMuted}
               value={destino}
-              onChangeText={setDestino}
+              onChangeText={handleCambioDestino}
               onSubmitEditing={handleBuscar}
               returnKeyType="search"
             />
+            {cargandoSugerencias && (
+              <ActivityIndicator size="small" color={Colors.orange} style={{ marginRight: 4 }} />
+            )}
           </View>
+
+          {/* Dropdown de sugerencias */}
+          {sugerencias.length > 0 && (
+            <View style={styles.sugerenciasContainer}>
+              {sugerencias.map((lugar, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.sugerenciaItem, idx < sugerencias.length - 1 && styles.sugerenciaItemBorder]}
+                  onPress={() => handleSugerencia(lugar)}
+                  activeOpacity={0.7}
+                >
+                  <IcoSearch size={14} color={Colors.textMuted} />
+                  <Text style={styles.sugerenciaText} numberOfLines={1}>{lugar}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           <TouchableOpacity
             style={[styles.btnBuscar, (!destino.trim() || buscando) && styles.btnDisabled]}
             onPress={handleBuscar}
@@ -200,9 +252,9 @@ export default function ViajeScreen() {
                   )}
                 </View>
 
-                {(grifo.precios?.length ?? 0) > 0 && (
+                {grifo.precios.length > 0 && (
                   <View style={styles.grifoBottom}>
-                    {grifo.precios?.slice(0, 2).map(p => (
+                    {grifo.precios.slice(0, 2).map(p => (
                       <View key={p.tipo} style={styles.precioChip}>
                         <Text style={styles.precioLabel}>{p.tipo}</Text>
                         {p.precio > 0
@@ -351,4 +403,34 @@ const styles = StyleSheet.create({
 
   loadingState: { alignItems: 'center', marginTop: 60, gap: 16 },
   loadingText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
+
+  sugerenciasContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+    marginTop: -4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  sugerenciaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  sugerenciaItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  sugerenciaText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.textPrimary,
+  },
 })

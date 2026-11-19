@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native'
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -39,7 +38,7 @@ function IcoCheckCircle({ color = '#16A34A', size = 36 }: { color?: string; size
   );
 }
 
-type EscanearState = 'camera' | 'processing' | 'result'
+type EscanearState = 'camera' | 'processing' | 'result' | 'confirmed'
 
 interface BoletaData {
   grifo: string
@@ -104,44 +103,72 @@ export default function EscanearScreen() {
   }
 
   function handleConfirm() {
-    Alert.alert(
-      '¡Puntos acreditados!',
-      `+${MOCK_BOLETA.puntos} puntos han sido añadidos a tu cuenta.`,
-      [{ text: 'Genial', onPress: handleReset }]
+    // ✅ No Alert.alert — usamos estado en pantalla (Hermes / New Architecture safe)
+    setState('confirmed')
+  }
+
+  // ── Estado: confirmación exitosa ─────────────────────────────────────────
+  if (state === 'confirmed') {
+    return (
+      <SafeAreaView style={styles.resultContainer} edges={['top', 'bottom']}>
+        <View style={[styles.resultContent, { justifyContent: 'center', alignItems: 'center' }]}>
+          <View style={[styles.successBadge, { width: 90, height: 90, borderRadius: 45, marginBottom: 24 }]}>
+            <IcoCheckCircle color="#059669" size={48} />
+          </View>
+          <Text style={[styles.resultTitle, { fontSize: 26 }]}>¡Puntos acreditados!</Text>
+          <Text style={[styles.resultSubtitle, { marginTop: 8, fontSize: 15, textAlign: 'center' }]}>
+            +{MOCK_BOLETA.puntos} puntos han sido añadidos a tu cuenta.
+          </Text>
+          <View style={{ marginTop: 48, width: '100%' }}>
+            <Button
+              label="Escanear otra boleta"
+              onPress={handleReset}
+              fullWidth
+            />
+          </View>
+        </View>
+      </SafeAreaView>
     )
   }
 
+  // ── Estado: cámara ───────────────────────────────────────────────────────
   if (state === 'camera') {
     return (
+      // ✅ FIX: CameraView NO tiene children — el overlay va FUERA con absoluteFillObject
       <View style={styles.cameraContainer}>
-        <CameraView style={styles.camera} facing="back">
-          <SafeAreaView style={styles.cameraOverlay} edges={['top', 'bottom']}>
-            <View style={styles.cameraHeader}>
-              <Text style={styles.cameraTitle}>Escanear boleta</Text>
-              <Text style={styles.cameraSubtitle}>Encuadra la boleta dentro del marco</Text>
-            </View>
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
+          facing="back"
+        />
+        <SafeAreaView
+          style={[styles.cameraOverlay, StyleSheet.absoluteFillObject]}
+          edges={['top', 'bottom']}
+        >
+          <View style={styles.cameraHeader}>
+            <Text style={styles.cameraTitle}>Escanear boleta</Text>
+            <Text style={styles.cameraSubtitle}>Encuadra la boleta dentro del marco</Text>
+          </View>
 
-            <View style={styles.guideContainer}>
-              <View style={styles.guideFrame}>
-                <View style={[styles.corner, styles.cornerTL]} />
-                <View style={[styles.corner, styles.cornerTR]} />
-                <View style={[styles.corner, styles.cornerBL]} />
-                <View style={[styles.corner, styles.cornerBR]} />
-                <Text style={styles.guideText}>Encuadra tu boleta aquí</Text>
-              </View>
+          <View style={styles.guideContainer}>
+            <View style={styles.guideFrame}>
+              <View style={[styles.corner, styles.cornerTL]} />
+              <View style={[styles.corner, styles.cornerTR]} />
+              <View style={[styles.corner, styles.cornerBL]} />
+              <View style={[styles.corner, styles.cornerBR]} />
+              <Text style={styles.guideText}>Encuadra tu boleta aquí</Text>
             </View>
+          </View>
 
-            <View style={styles.captureArea}>
-              <View style={styles.captureTipRow}>
-                <IcoLightbulb />
-                <Text style={styles.captureTip}>Asegúrate de que el texto sea legible</Text>
-              </View>
-              <TouchableOpacity style={styles.captureBtn} onPress={handleCapture} activeOpacity={0.85}>
-                <View style={styles.captureBtnInner} />
-              </TouchableOpacity>
+          <View style={styles.captureArea}>
+            <View style={styles.captureTipRow}>
+              <IcoLightbulb />
+              <Text style={styles.captureTip}>Asegúrate de que el texto sea legible</Text>
             </View>
-          </SafeAreaView>
-        </CameraView>
+            <TouchableOpacity style={styles.captureBtn} onPress={handleCapture} activeOpacity={0.85}>
+              <View style={styles.captureBtnInner} />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
       </View>
     )
   }
@@ -263,11 +290,7 @@ const styles = StyleSheet.create({
   cameraContainer: {
     flex: 1,
   },
-  camera: {
-    flex: 1,
-  },
   cameraOverlay: {
-    flex: 1,
     justifyContent: 'space-between',
   },
   cameraHeader: {
