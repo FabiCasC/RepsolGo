@@ -138,7 +138,8 @@ export const PlacesService = {
         `);` +
         `out center;`
 
-      const res = await fetch('https://overpass-api.de/api/interpreter', {
+      const OVERPASS = 'https://overpass-api.de/api/interpreter'
+      const res = await fetch(OVERPASS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -147,7 +148,16 @@ export const PlacesService = {
         body: `data=${encodeURIComponent(query)}`,
       })
 
-      const data = await res.json()
+      if (!res.ok) {
+        console.warn('[PlacesService] Overpass HTTP error:', res.status, '— usando Firestore')
+        return FirestoreService.getGrifos()
+      }
+      const text = await res.text()
+      if (!text.trim().startsWith('{')) {
+        console.warn('[PlacesService] Overpass respuesta no-JSON:', text.slice(0, 120))
+        return FirestoreService.getGrifos()
+      }
+      const data = JSON.parse(text)
       const elementos = data.elements ?? []
 
       if (elementos.length === 0) {
@@ -288,7 +298,16 @@ export const PlacesService = {
           body: `data=${encodeURIComponent(query)}`,
         })
 
-        const data = await res.json()
+        if (!res.ok) {
+          console.warn('[PlacesService] Overpass HTTP error en waypoint:', res.status)
+          continue
+        }
+        const wpText = await res.text()
+        if (!wpText.trim().startsWith('{')) {
+          console.warn('[PlacesService] Overpass no-JSON en waypoint:', wpText.slice(0, 80))
+          continue
+        }
+        const data = JSON.parse(wpText)
         for (const el of data.elements ?? []) {
           const base = overpassToGrifo(el)
           if (!grifoMap.has(base.id)) {
