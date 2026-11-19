@@ -102,6 +102,17 @@ export default function AppLayout() {
           }}
         />
         <Tabs.Screen
+          name="viaje"
+          options={{
+            title: 'Viaje',
+            tabBarIcon: ({ color }) => (
+              <View style={tabIconStyles.container}>
+                <Text style={[tabIconStyles.emoji, { color }]}>🚗</Text>
+              </View>
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="retos"
           options={{
             title: 'Retos',

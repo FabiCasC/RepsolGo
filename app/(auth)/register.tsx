@@ -15,6 +15,7 @@ import { Colors } from '../../src/constants/colors'
 import { Button } from '../../src/components/ui/Button'
 import { Input } from '../../src/components/ui/Input'
 import { useAuthStore } from '../../src/store/auth.store'
+import { FirestoreService } from '../../src/services/firestore.service'
 import type { UserRole } from '../../src/types'
 
 export default function RegisterScreen() {
@@ -25,6 +26,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [placa, setPlaca] = useState('')
   const [rol, setRol] = useState<UserRole>('cliente')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -43,8 +45,19 @@ export default function RegisterScreen() {
   async function handleRegister() {
     if (!validate()) return
     try {
-      await register(nombre.trim(), email, password)
-      router.replace('/(app)/mapa')
+      await register(nombre.trim(), email, password, rol)
+      // After register, the user is set in the store; get uid from auth store state
+      const { user: newUser } = useAuthStore.getState()
+      if (placa.trim() && newUser?.id) {
+        try {
+          await FirestoreService.registrarPlaca(placa.trim().toUpperCase(), newUser.id, nombre.trim())
+        } catch {}
+      }
+      if (rol === 'operario') {
+        router.replace('/(operario)/escanear-placa')
+      } else {
+        router.replace('/(app)/mapa')
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'No se pudo crear la cuenta.'
       Alert.alert('Error', msg)
@@ -103,6 +116,17 @@ export default function RegisterScreen() {
               secureTextEntry
               error={errors.confirmPassword}
             />
+
+            {rol === 'cliente' && (
+              <Input
+                label="Placa del vehículo (opcional)"
+                value={placa}
+                onChangeText={t => setPlaca(t.toUpperCase())}
+                placeholder="Ej: ABC-123"
+                autoCapitalize="characters"
+                maxLength={8}
+              />
+            )}
 
             <Text style={styles.rolLabel}>¿Cuál es tu perfil?</Text>
             <View style={styles.rolRow}>

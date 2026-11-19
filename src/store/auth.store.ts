@@ -22,7 +22,7 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (nombre: string, email: string, password: string) => Promise<void>
+  register: (nombre: string, email: string, password: string, rol?: 'cliente' | 'operario') => Promise<void>
   logout: () => Promise<void>
   updateUser: (data: Partial<User>) => Promise<void>
   checkAuth: () => void
@@ -62,7 +62,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (nombre: string, email: string, password: string) => {
+  register: async (nombre: string, email: string, password: string, rol: 'cliente' | 'operario' = 'cliente') => {
     set({ isLoading: true })
     try {
       const credential = await createUserWithEmailAndPassword(auth, email, password)
@@ -70,7 +70,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const userData = {
         nombre,
         email,
-        rol: 'cliente' as const,
+        rol,
         puntos: 0,
         nivel: 'Bronce' as NivelFidelizacion,
       }

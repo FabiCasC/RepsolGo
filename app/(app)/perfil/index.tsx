@@ -143,6 +143,8 @@ export default function PerfilScreen() {
             />
             <MenuItem icon="⛽" label="Mis cargas" onPress={() => router.push('/(app)/perfil/mis-cargas')} />
             <MenuItem icon="⭐" label="Mis favoritos" onPress={() => router.push('/(app)/perfil/mis-favoritos')} />
+            <MenuItem icon="📊" label="Historial inteligente" onPress={() => router.push('/(app)/perfil/historial')} />
+            <MenuItem icon="👨‍👩‍👧‍👦" label="Cuenta grupal / familiar" onPress={() => router.push('/(app)/perfil/cuenta-grupal')} />
           </View>
         </View>
 

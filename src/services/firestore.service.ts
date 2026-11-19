@@ -293,4 +293,120 @@ export const FirestoreService = {
     const userRef = doc(db, 'users', uid)
     await updateDoc(userRef, { nivel })
   },
+
+  // --- Placa / Operario methods ---
+  async getClienteByPlaca(placa: string): Promise<{ uid: string; nombre: string; grupoId?: string } | null> {
+    const placaRef = doc(db, 'placas', placa.toUpperCase())
+    const snap = await getDoc(placaRef)
+    if (!snap.exists()) return null
+    return snap.data() as { uid: string; nombre: string; grupoId?: string }
+  },
+
+  async registrarPlaca(placa: string, uid: string, nombre: string): Promise<void> {
+    const placaRef = doc(db, 'placas', placa.toUpperCase())
+    await setDoc(placaRef, { uid, nombre }, { merge: true })
+  },
+
+  async acreditarPuntosCliente(uid: string, puntos: number, cargaData: CargaData): Promise<void> {
+    await this.addCarga(uid, { ...cargaData, puntos })
+    await this.actualizarNivel(uid, puntos)
+  },
+
+  async guardarIncidencia(data: {
+    categoria: string
+    descripcion: string
+    fotoUri?: string
+    grifoId: string
+    operarioId: string
+  }): Promise<string> {
+    const ref = await addDoc(collection(db, 'incidencias'), {
+      ...data,
+      timestamp: serverTimestamp(),
+    })
+    return ref.id
+  },
+
+  async getIncidenciasByOperario(operarioId: string): Promise<{ id: string; categoria: string; descripcion: string; timestamp: Timestamp }[]> {
+    const q = query(collection(db, 'incidencias'), orderBy('timestamp', 'desc'))
+    const snap = await getDocs(q)
+    return snap.docs
+      .filter(d => d.data().operarioId === operarioId)
+      .map(d => ({ id: d.id, ...d.data() } as { id: string; categoria: string; descripcion: string; timestamp: Timestamp }))
+  },
+
+  async registrarTurno(data: {
+    operarioId: string
+    tipo: 'entrada' | 'salida'
+    lat?: number
+    lng?: number
+  }): Promise<string> {
+    const ref = await addDoc(collection(db, 'turnos'), {
+      ...data,
+      timestamp: serverTimestamp(),
+    })
+    return ref.id
+  },
+
+  async getUltimoTurno(operarioId: string): Promise<{ id: string; tipo: 'entrada' | 'salida'; timestamp: Timestamp } | null> {
+    const q = query(collection(db, 'turnos'), orderBy('timestamp', 'desc'))
+    const snap = await getDocs(q)
+    const doc = snap.docs.find(d => d.data().operarioId === operarioId)
+    if (!doc) return null
+    return { id: doc.id, ...doc.data() } as { id: string; tipo: 'entrada' | 'salida'; timestamp: Timestamp }
+  },
+
+  // --- Grupos methods ---
+  async crearGrupo(data: {
+    nombre: string
+    tipo: 'familiar' | 'empresarial'
+    titularUid: string
+    titularNombre: string
+  }): Promise<string> {
+    const ref = await addDoc(collection(db, 'grupos'), {
+      ...data,
+      placas: [],
+      puntosPool: 0,
+      createdAt: serverTimestamp(),
+    })
+    // Link group to user
+    const userRef = doc(db, 'users', data.titularUid)
+    await updateDoc(userRef, { grupoId: ref.id })
+    return ref.id
+  },
+
+  async getGrupo(grupoId: string): Promise<{
+    id: string
+    nombre: string
+    tipo: string
+    titularUid: string
+    placas: { placa: string; alias: string }[]
+    puntosPool: number
+  } | null> {
+    const snap = await getDoc(doc(db, 'grupos', grupoId))
+    if (!snap.exists()) return null
+    return { id: snap.id, ...snap.data() } as {
+      id: string; nombre: string; tipo: string; titularUid: string;
+      placas: { placa: string; alias: string }[]; puntosPool: number
+    }
+  },
+
+  async agregarPlacaGrupo(grupoId: string, placa: string, alias: string, uid: string, nombre: string): Promise<void> {
+    const grupoRef = doc(db, 'grupos', grupoId)
+    const snap = await getDoc(grupoRef)
+    if (!snap.exists()) throw new Error('Grupo no encontrado')
+    const data = snap.data()
+    const placas: { placa: string; alias: string }[] = data.placas ?? []
+    placas.push({ placa: placa.toUpperCase(), alias })
+    await updateDoc(grupoRef, { placas })
+    // Also register in /placas collection
+    await this.registrarPlaca(placa, uid, nombre)
+    const placaRef = doc(db, 'placas', placa.toUpperCase())
+    await updateDoc(placaRef, { grupoId, alias })
+  },
+
+  async getGrupoByUser(uid: string): Promise<string | null> {
+    const userSnap = await getDoc(doc(db, 'users', uid))
+    if (!userSnap.exists()) return null
+    return userSnap.data().grupoId ?? null
+  },
 }
